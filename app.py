@@ -266,7 +266,35 @@ def analyze():
 
         issues = []
 
-        if inventory <= 0:
-            issues.append("OUT_OF_STOCK")
+          if inventory <= 0:
+    issues.append("OUT_OF_STOCK")
 
-        if status
+if status != "ACTIVE":
+    issues.append("NOT_ACTIVE")
+
+if min_price <= 0:
+            issues.append("PRICE_CHECK_NEEDED")
+
+        product_results.append({
+            "id": product.get("id"),
+            "title": product.get("title"),
+            "handle": product.get("handle"),
+            "status": status,
+            "inventory": inventory,
+            "min_price": min_price,
+            "max_price": max_price,
+            "issues": issues
+        })
+
+    return jsonify({
+        "agent": "Luree AI Agent",
+        "store": SHOPIFY_STORE_DOMAIN,
+        "summary": {
+            "total_products": len(products_list),
+            "active_products": active,
+            "draft_products": draft,
+            "out_of_stock_products": out_of_stock,
+            "total_inventory": total_inventory
+        },
+        "products": product_results
+    })

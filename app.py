@@ -5,40 +5,33 @@ from flask import Flask, jsonify
 
 app = Flask(name)
 
-SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN")
-SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY")
-SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET")
+SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN", "").strip()
+SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY", "").strip()
+SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET", "").strip()
 
 SHOPIFY_API_VERSION = "2026-07"
 
-_token_cache = {
+TOKEN_CACHE = {
     "access_token": None,
     "expires_at": 0
 }
 
 
-def get_shop_domain():
-    if not SHOPIFY_STORE_DOMAIN:
-        return None
-
-    domain = SHOPIFY_STORE_DOMAIN.strip()
-    domain = domain.replace("https://", "").replace("http://", "")
+def clean_shop_domain():
+    domain = SHOPIFY_STORE_DOMAIN
+    domain = domain.replace("https://", "")
+    domain = domain.replace("http://", "")
     domain = domain.rstrip("/")
-
     return domain
 
 
 def get_access_token():
-    # Use cached token if it is still valid
-    if (
-        _token_cache["access_token"]
-        and time.time() < _token_cache["expires_at"]
-    ):
-        return _token_cache["access_token"], None
+    if TOKEN_CACHE["access_token"] and time.time() < TOKEN_CACHE["expires_at"]:
+        return TOKEN_CACHE["access_token"], None
 
-    shop_domain = get_shop_domain()
+    domain = clean_shop_domain()
 
-    if not shop_domain:
+    if not domain:
         return None, "SHOPIFY_STORE_DOMAIN is missing"
 
     if not SHOPIFY_API_KEY:
@@ -47,11 +40,11 @@ def get_access_token():
     if not SHOPIFY_API_SECRET:
         return None, "SHOPIFY_API_SECRET is missing"
 
-    token_url = f"https://{shop_domain}/admin/oauth/access_token"
+    url = f"https://{domain}/admin/oauth/access_token"
 
     try:
         response = requests.post(
-            token_url,
+            url,
             data={
                 "grant_type": "client_credentials",
                 "client_id": SHOPIFY_API_KEY,
@@ -59,32 +52,34 @@ def get_access_token():
             },
             timeout=30
         )
+    except requests.RequestException as exc:
+        return None, str(exc)
 
-        if response.status_code != 200:
-            return None, {
-                "status_code": response.status_code,
-                "shopify_response": response.text
-            }
+    if response.status_code != 200:
+        return None, {
+            "status_code": response.status_code,
+            "shopify_response": response.text
+        }
 
+    try:
         data = response.json()
+    except ValueError:
+        return None, "Shopify returned an invalid response"
 
-        access_token = data.get("access_token")
-        expires_in = data.get("expires_in", 86399)
+    access_token = data.get("access_token")
 
-        if not access_token:
-            return None, {
-                "error": "Shopify did not return an access token",
-                "shopify_response": data
-            }
+    if not access_token:
+        return None, {
+            "error": "No access token returned by Shopify",
+            "shopify_response": data
+        }
 
-        # Refresh a little before actual expiration
-        _token_cache["access_token"] = access_token
-        _token_cache["expires_at"] = time.time() + expires_in - 300
+    expires_in = data.get("expires_in", 86400)
 
-        return access_token, None
+    TOKEN_CACHE["access_token"] = access_token
+    TOKEN_CACHE["expires_at"] = time.time() + max(expires_in - 300, 60)
 
-    except Exception as e:
-        return None, str(e)
+    return access_token, None
 
 
 def shopify_graphql(query, variables=None):
@@ -93,10 +88,10 @@ def shopify_graphql(query, variables=None):
     if token_error:
         return None, token_error
 
-    shop_domain = get_shop_domain()
+    domain = clean_shop_domain()
 
     url = (
-        f"https://{shop_domain}/admin/api/"
+        f"https://{domain}/admin/api/"
         f"{SHOPIFY_API_VERSION}/graphql.json"
     )
 
@@ -105,32 +100,61 @@ def shopify_graphql(query, variables=None):
         "Content-Type": "application/json"
     }
 
+    payload = {
+        "query": query,
+        "variables": variables or {}
+    }
+
     try:
         response = requests.post(
             url,
             headers=headers,
-            json={
-                "query": query,
-                "variables": variables or {}
-            },
+            json=payload,
             timeout=30
         )
+    except requests.RequestException as exc:
+        return None, str(exc)
 
-        if response.status_code != 200:
-            return None, {
-                "status_code": response.status_code,
-                "shopify_response": response.text
-            }
+    if response.status_code != 200:
+        return None, {
+            "status_code": response.status_code,
+            "shopify_response": response.text
+        }
 
-        data = response.json()
+    try:
+        result = response.json()
+    except ValueError:
+        return None, "Shopify returned an invalid JSON response"
 
-        if data.get("errors"):
-            return None, data["errors"]
+    if result.get("errors"):
+        return None, result["errors"]
 
-        return data.get("data"), None
+    return result.get("data"), None
 
-    except Exception as e:
-        return None, str(e)
+
+PRODUCT_QUERY = """
+query GetProducts {
+  products(first: 100) {
+    nodes {
+      id
+      title
+      handle
+      status
+      totalInventory
+      productType
+      vendor
+      variants(first: 100) {
+        nodes {
+          id
+          title
+          price
+          inventoryQuantity
+        }
+      }
+    }
+  }
+}
+"""
 
 
 @app.route("/")
@@ -153,31 +177,7 @@ def home():
 
 @app.route("/products")
 def products():
-    query = """
-    query GetProducts {
-      products(first: 100) {
-        nodes {
-          id
-          title
-          handle
-          status
-          totalInventory
-          productType
-          vendor
-          variants(first: 100) {
-            nodes {
-              id
-              title
-              price
-              inventoryQuantity
-            }
-          }
-        }
-      }
-    }
-    """
-
-    data, error = shopify_graphql(query)
+    data, error = shopify_graphql(PRODUCT_QUERY)
 
     if error:
         return jsonify({
@@ -196,30 +196,7 @@ def products():
 
 @app.route("/analyze")
 def analyze():
-    query = """
-    query AnalyzeProducts {
-      products(first: 100) {
-        nodes {
-          id
-          title
-          handle
-          status
-          totalInventory
-          productType
-          vendor
-          variants(first: 100) {
-            nodes {
-              title
-              price
-              inventoryQuantity
-            }
-          }
-        }
-      }
-    }
-    """
-
-    data, error = shopify_graphql(query)
+    data, error = shopify_graphql(PRODUCT_QUERY)
 
     if error:
         return jsonify({
@@ -233,7 +210,6 @@ def analyze():
     draft = 0
     out_of_stock = 0
     total_inventory = 0
-
     product_results = []
 
     for product in products_list:
@@ -252,12 +228,13 @@ def analyze():
             out_of_stock += 1
 
         variants = product.get("variants", {}).get("nodes", [])
-
         prices = []
 
         for variant in variants:
+            price = variant.get("price")
+
             try:
-                prices.append(float(variant.get("price", 0)))
+                prices.append(float(price))
             except (ValueError, TypeError):
                 pass
 
@@ -266,7 +243,7 @@ def analyze():
 
         issues = []
 
-if inventory <= 0:
+        if inventory <= 0:
             issues.append("OUT_OF_STOCK")
 
         if status != "ACTIVE":

@@ -266,13 +266,13 @@ def analyze():
 
         issues = []
 
-          if inventory <= 0:
-    issues.append("OUT_OF_STOCK")
+if inventory <= 0:
+            issues.append("OUT_OF_STOCK")
 
-if status != "ACTIVE":
-    issues.append("NOT_ACTIVE")
+        if status != "ACTIVE":
+            issues.append("NOT_ACTIVE")
 
-if min_price <= 0:
+        if min_price <= 0:
             issues.append("PRICE_CHECK_NEEDED")
 
         product_results.append({

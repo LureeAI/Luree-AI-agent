@@ -20,7 +20,3 @@ def home():
             SHOPIFY_API_SECRET
         )
     })
-
-if __ name__ == "__main__":
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)

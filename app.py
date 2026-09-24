@@ -2,7 +2,7 @@ import os
 import requests
 from flask import Flask, jsonify
 
-app = Flask(name)
+app = Flask(__name__)
 
 SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN")
 SHOPIFY_ACCESS_TOKEN = os.environ.get("SHOPIFY_ACCESS_TOKEN")

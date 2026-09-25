@@ -354,7 +354,7 @@ def analyze():
 
         if inventory <= 0:
             out_of_stock += 1
-[2026-09-25 오전 9:08] MAHMOUD GHOSOUN: variants = product.get("variants", {}).get("nodes", [])
+: variants = product.get("variants", {}).get("nodes", [])
         prices = []
 
         for variant in variants:

@@ -228,7 +228,7 @@ def products():
     })
     @app.route("/analyze")
     def analyze():
-    data, error = shopify_graphql(PRODUCT_QUERY)
+        data, error = shopify_graphql(PRODUCT_QUERY)
 
     if error:
         return jsonify({

@@ -334,13 +334,13 @@ def analyze():
 
 products_list = data.get("products", {}).get("nodes", [])
 
-    active = 0
-    draft = 0
-    out_of_stock = 0
-    total_inventory = 0
-    product_results = []
+   active = 0
+draft = 0
+out_of_stock = 0
+total_inventory = 0
+product_results = []
 
-    for product in products_list:
+for product in products_list:
         status = product.get("status", "")
         inventory = product.get("totalInventory") or 0
 

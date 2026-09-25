@@ -3,7 +3,7 @@ import time
 import requests
 from flask import Flask, jsonify
 
-app = Flask(name)
+app = Flask(__name__)
 
 SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN", "").strip()
 SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY", "").strip()

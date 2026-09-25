@@ -354,8 +354,8 @@ def analyze():
 
         if inventory <= 0:
             out_of_stock += 1
- variants = product.get("variants", {}).get("nodes", [])
-        prices = []
+         variants = product.get("variants", {}).get("nodes", [])
+         prices = []
 
         for variant in variants:
             price = variant.get("price")

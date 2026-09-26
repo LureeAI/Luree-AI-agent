@@ -3,9 +3,11 @@ import time
 import requests
 from flask import Flask, jsonify
 from shopify_auth import shopify_auth
+from agent_routes import agent_routes
 
 app = Flask(__name__)
 app.register_blueprint(shopify_auth)
+app.register_blueprint(agent_routes)
 
 SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN", "").strip()
 SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY", "").strip()

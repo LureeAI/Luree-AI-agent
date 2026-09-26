@@ -2,9 +2,10 @@ import os
 import time
 import requests
 from flask import Flask, jsonify
-
+from shopify_auth import shopify_auth
 
 app = Flask(__name__)
+app.register_blueprint(shopify_auth)
 
 SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN", "").strip()
 SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY", "").strip()

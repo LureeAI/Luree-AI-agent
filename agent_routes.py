@@ -8,7 +8,6 @@ agent_routes = Blueprint(
     name,
 )
 
-
 @agent_routes.route(
     "/ai/health",
     methods=["GET"],

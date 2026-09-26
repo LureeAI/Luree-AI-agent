@@ -134,7 +134,7 @@ def shopify_callback():
     
     @shopify_auth.route("/shopify/products")
     def shopify_products():
-    if not shopify_access_token:
+        if not shopify_access_token:
         return jsonify({
             "success": False,
             "error": "Shopify is not connected"

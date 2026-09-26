@@ -34,9 +34,9 @@ def ask_llm(message, store_context=None):
             f"USER REQUEST:\n{message}"
         )
 
-    client = get_client()
+ client = get_client()
 
-  response = client.responses.create(
+    response = client.responses.create(
         model=OPENAI_MODEL,
         instructions=instructions,
         input=user_input

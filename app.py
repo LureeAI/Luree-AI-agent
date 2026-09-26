@@ -11,7 +11,7 @@ SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN", "").strip()
 SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY", "").strip()
 SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET", "").strip()
 
-SHOPIFY_API_VERSION = "2026-07"
+SHOPIFY_API_VERSION = "2026-04"
 
 TOKEN_CACHE = {
     "access_token": None,

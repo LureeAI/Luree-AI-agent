@@ -134,12 +134,8 @@ def shopify_callback():
     
 @shopify_auth.route("/shopify/products")
 def shopify_products():
-IndentationError: unexpected indent
     if not shopify_access_token:
-        return jsonify({
-            "success": False,
-            "error": "Shopify is not connected"
-        }), 401
+        return jsonify({"success": False, "error": "Shopify is not connected"}), 401
 
     shop = clean_shop_domain()
 
@@ -168,6 +164,4 @@ IndentationError: unexpected indent
         timeout=30
     )
 
-result = response.json()
-    status = response.status_code
-    return jsonify(result), status
+    return jsonify(response.json()), response.status_code

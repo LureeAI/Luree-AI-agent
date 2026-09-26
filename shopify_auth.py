@@ -131,3 +131,39 @@ def shopify_callback():
         "message": "Luree AI Agent connected to Shopify successfully",
         "shop": shop
     })
+    @shopify_auth.route("/shopify/products")
+def shopify_products():
+    if not shopify_access_token:
+        return jsonify({
+            "success": False,
+            "error": "Shopify is not connected"
+        }), 401
+
+    shop = clean_shop_domain()
+
+    query = """
+    query {
+      products(first: 20) {
+        nodes {
+          id
+          title
+          status
+          totalInventory
+          productType
+          vendor
+        }
+      }
+    }
+    """
+
+    response = requests.post(
+        f"https://{shop}/admin/api/2026-07/graphql.json",
+        headers={
+            "X-Shopify-Access-Token": shopify_access_token,
+            "Content-Type": "application/json"
+        },
+        json={"query": query},
+        timeout=30
+    )
+
+    return jsonify(response.json()), response.status_code

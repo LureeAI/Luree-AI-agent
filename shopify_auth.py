@@ -167,4 +167,6 @@ def shopify_products():
         timeout=30
     )
 
-    return jsonify(response.json()), response.status_code
+        return
+    jsonify(response.json()),
+    response.status_code

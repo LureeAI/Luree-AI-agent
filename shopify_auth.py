@@ -155,7 +155,7 @@ def shopify_products():
     """
 
     response = requests.post(
-        f"https://{shop}/admin/api/2026-07/graphql.json",
+        f"https://{shop}/admin/api/2026-04/graphql.json",
         headers={
             "X-Shopify-Access-Token": shopify_access_token,
             "Content-Type": "application/json"

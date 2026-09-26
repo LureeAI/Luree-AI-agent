@@ -5,7 +5,7 @@ from agent_service import run_agent
 
 agent_routes = Blueprint(
     "agent_routes",
-    name,
+    __name__,
 )
 
 @agent_routes.route(

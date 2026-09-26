@@ -167,6 +167,6 @@ def shopify_callback():
         timeout=30
     )
 
-        return
-    jsonify(response.json()),
-    response.status_code
+result = response.json()
+    status = response.status_code
+    return jsonify(result), status

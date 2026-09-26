@@ -131,6 +131,7 @@ def shopify_callback():
         "message": "Luree AI Agent connected to Shopify successfully",
         "shop": shop
     })
+    
     @shopify_auth.route("/shopify/products")
 def shopify_products():
     if not shopify_access_token:

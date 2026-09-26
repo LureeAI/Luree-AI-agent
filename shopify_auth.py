@@ -1,4 +1,4 @@
-import os
+كimport os
 import hmac
 import hashlib
 import secrets
@@ -46,7 +46,7 @@ def shopify_connect():
     if not shop:
         return jsonify({
             "success": False,
-      "error": "SHOPIFY_STORE_DOMAIN is missing"
+            "error": "SHOPIFY_STORE_DOMAIN is missing"
         }), 500
 
     oauth_state = secrets.token_urlsafe(32)
@@ -108,10 +108,8 @@ def shopify_callback():
 
     shop = clean_shop_domain(shop)
 
-    token_url = f"https://{shop}/admin/oauth/access_token"
-
     response = requests.post(
-        token_url,
+        f"https://{shop}/admin/oauth/access_token",
         data={
             "client_id": SHOPIFY_API_KEY,
             "client_secret": SHOPIFY_API_SECRET,
@@ -124,8 +122,7 @@ def shopify_callback():
         return jsonify({
             "success": False,
             "error": "Token exchange failed",
-            "status_code": response.status_code,
-            "details": response.text[:500]
+            "status_code": response.status_code
         }), 400
 
     token_data = response.json()
@@ -144,7 +141,78 @@ def shopify_callback():
         "message": "Luree AI Agent connected to Shopify successfully",
         "shop": connected_shop
     })
-
-
 @shopify_auth.route("/shopify/products")
-def
+def shopify_products():
+    if not shopify_access_token or not connected_shop:
+        return jsonify({
+            "success": False,
+            "error": "Shopify is not connected"
+        }), 401
+
+    query = """
+    query {
+      products(first: 20) {
+        nodes {
+          id
+          title
+          status
+          totalInventory
+          productType
+          vendor
+        }
+      }
+    }
+    """
+
+    url = f"https://{connected_shop}/admin/api/{API_VERSION}/graphql.json"
+
+    try:
+        response = requests.post(
+            url,
+            headers={
+                "X-Shopify-Access-Token": shopify_access_token,
+                "Content-Type": "application/json"
+            },
+            json={"query": query},
+            timeout=30
+        )
+
+        result = response.json()
+
+    except requests.RequestException as error:
+        return jsonify({
+            "success": False,
+            "error": "Could not contact Shopify",
+            "details": str(error)
+        }), 502
+
+    except ValueError:
+        return jsonify({
+            "success": False,
+            "error": "Shopify returned invalid JSON",
+            "status_code": response.status_code
+        }), 502
+
+    if response.status_code != 200:
+        return jsonify({
+            "success": False,
+            "error": "Shopify API request failed",
+            "status_code": response.status_code,
+            "response": result
+        }), response.status_code
+
+    if result.get("errors"):
+        return jsonify({
+            "success": False,
+            "error": "Shopify GraphQL error",
+            "response": result
+        }), 400
+
+    products = result.get("data", {}).get("products", {}).get("nodes", [])
+
+    return jsonify({
+        "success": True,
+        "shop": connected_shop,
+        "product_count": len(products),
+        "products": products
+    })    

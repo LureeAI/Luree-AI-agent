@@ -7,7 +7,7 @@ from urllib.parse import urlencode
 import requests
 from flask import Blueprint, redirect, request, jsonify
 
-shopify_auth = Blueprint("shopify_auth", name)
+shopify_auth = Blueprint("shopify_auth", __name__)
 
 SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY", "").strip()
 SHOPIFY_API_SECRET = os.environ.get("SHOPIFY_API_SECRET", "").strip()

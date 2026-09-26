@@ -132,7 +132,7 @@ def shopify_callback():
         "shop": shop
     })
     
- @shopify_auth.route("/shopify/products")
+@shopify_auth.route("/shopify/products")
  def shopify_products():
     if not shopify_access_token:
         return jsonify({

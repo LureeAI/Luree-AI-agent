@@ -1,3 +1,4 @@
+from database import load_shopify_connection
 import requests
 
 import shopify_auth as shopify_module
@@ -7,8 +8,11 @@ API_VERSION = "2026-04"
 
 
 def _get_connection():
-    shop = shopify_module.connected_shop
-    access_token = shopify_module.shopify_access_token
+    shop, access_token = load_shopify_connection()
+
+    if not shop or not access_token:
+        shop = shopify_module.connected_shop
+        access_token = shopify_module.shopify_access_token
 
     if not shop or not access_token:
         raise RuntimeError("Shopify is not connected")

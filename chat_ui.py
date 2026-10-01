@@ -1,6 +1,6 @@
 from flask import Blueprint, Response
 
-chat_ui = Blueprint("chat_ui", name)
+chat_ui = Blueprint("chat_ui", __name__)
 
 PAGE = """
 <!doctype html>

@@ -13,9 +13,7 @@ app.register_blueprint(agent_routes)
 app.register_blueprint(chat_ui)
 
 
-app = Flask(__name__)
-app.register_blueprint(shopify_auth)
-app.register_blueprint(agent_routes)
+
 
 SHOPIFY_STORE_DOMAIN = os.environ.get("SHOPIFY_STORE_DOMAIN", "").strip()
 SHOPIFY_API_KEY = os.environ.get("SHOPIFY_API_KEY", "").strip()

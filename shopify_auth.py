@@ -1,3 +1,4 @@
+from database import save_shopify_connection
 import os
 import hmac
 import hashlib
@@ -135,6 +136,7 @@ def shopify_callback():
         }), 400
 
     connected_shop = shop
+    save_shopify_connection(connected_shop, shopify_access_token)
 
     return jsonify({
         "success": True,

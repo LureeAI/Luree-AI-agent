@@ -4,6 +4,18 @@ import requests
 from flask import Flask, jsonify
 from shopify_auth import shopify_auth
 from agent_routes import agent_routes
+from chat_ui import chat_ui
+
+app = Flask(name)
+app.register_blueprint(shopify_auth)
+app.register_blueprint(agent_routes)
+app.register_blueprint(chat_ui)
+import os
+import time
+import requests
+from flask import Flask, jsonify
+from shopify_auth import shopify_auth
+from agent_routes import agent_routes
 
 app = Flask(__name__)
 app.register_blueprint(shopify_auth)

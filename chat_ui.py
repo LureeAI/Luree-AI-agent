@@ -32,21 +32,52 @@ border-radius:12px;padding:12px 18px;font:inherit;cursor:pointer}
 button:disabled{opacity:.5}
 #status{min-height:24px;color:#bbb;font-size:14px}
 .identity{display:flex;align-items:center;gap:16px}
-#face{width:86px;height:86px;border:2px solid #eac884;border-radius:45%;background:#222633;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;flex-shrink:0}
-.eyes{display:flex;gap:23px}.eye{width:10px;height:13px;border-radius:50%;background:#eac884}
-.mouth{width:28px;height:8px;border-bottom:3px solid #eac884;border-radius:50%}
-#face.thinking .eye{animation:blink 1s infinite}
-#face.speaking .mouth{background:#eac884;animation:talk .3s infinite alternate}
-#face.listening{box-shadow:0 0 20px #eac884}
+#face{width:150px;height:158px;flex-shrink:0;filter:drop-shadow(0 8px 14px #0008);transition:filter .2s}
+#face svg{width:100%;height:100%;overflow:visible}
+#face .robot-eyes{transform-box:fill-box;transform-origin:center;animation:robot-blink 6s infinite}
+#face .mouth{transform-box:fill-box;transform-origin:center}
+#face.speaking .mouth{animation:robot-talk .28s infinite alternate}
+#face.thinking .forehead{animation:robot-glow .8s infinite alternate}
+#face.listening{filter:drop-shadow(0 0 14px #eac884)}
+@keyframes robot-blink{0%,44%,48%,100%{transform:scaleY(1)}46%{transform:scaleY(.12)}}
+@keyframes robot-talk{from{transform:scaleY(.45)}to{transform:scaleY(1.4)}}
+@keyframes robot-glow{to{opacity:.25}}
+@media(max-width:480px){#face{width:120px;height:128px}h1{font-size:21px}}
 .controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.controls button{padding:8px 12px;font-size:14px}
-@keyframes blink{50%{transform:scaleY(.2)}}@keyframes talk{to{height:18px}}
-@media(prefers-reduced-motion:reduce){#face .eye,#face .mouth{animation:none!important}}
+@media(prefers-reduced-motion:reduce){#face .robot-eyes,#face .mouth,#face .forehead{animation:none!important}}
 </style>
 </head>
 <body>
 <main>
 <header>
-<div class="identity"><div id="face" role="img" aria-label="وجه الوكيل"><div class="eyes"><span class="eye"></span><span class="eye"></span></div><div class="mouth"></div></div><div><h1>Luree AI Agent</h1><p>مساعدك لإدارة وتحليل متجر Luree Fashions</p></div></div>
+<div class="identity"><div id="face" role="img" aria-label="رأس روبوت أبيض وذهبي">
+<svg viewBox="0 0 180 190" aria-hidden="true">
+<defs>
+<linearGradient id="ceramic" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fffef9"/><stop offset=".5" stop-color="#f1eadb"/><stop offset="1" stop-color="#c9bc9f"/></linearGradient>
+<linearGradient id="gold"><stop stop-color="#99702d"/><stop offset=".45" stop-color="#ffe9a6"/><stop offset="1" stop-color="#b2853c"/></linearGradient>
+<radialGradient id="iris"><stop stop-color="#ffedb1"/><stop offset=".65" stop-color="#b58330"/><stop offset="1" stop-color="#503514"/></radialGradient>
+</defs>
+<rect x="60" y="157" width="60" height="23" rx="9" fill="url(#gold)"/>
+<ellipse cx="90" cy="178" rx="38" ry="7" fill="#ede3cd" stroke="#bc944d" stroke-width="3"/>
+<rect x="9" y="0" width="20" height="65" rx="10" fill="url(#gold)" transform="translate(0 58)"/>
+<rect x="151" y="58" width="20" height="65" rx="10" fill="url(#gold)"/>
+<path d="M90 10 C137 10 157 40 155 91 C153 131 133 161 90 166 C47 161 27 131 25 91 C23 40 43 10 90 10Z" fill="url(#ceramic)" stroke="#d5ae64" stroke-width="3"/>
+<path d="M49 21 L59 61 M131 21 L121 61" fill="none" stroke="url(#gold)" stroke-width="5"/>
+<rect x="81" y="24" width="18" height="27" rx="9" fill="url(#gold)"/>
+<rect class="forehead" x="87" y="29" width="6" height="16" rx="3" fill="#fff7d8"/>
+<path d="M42 70 Q57 60 70 68 M110 68 Q123 60 138 70" fill="none" stroke="#89652f" stroke-width="4" stroke-linecap="round"/>
+<g class="robot-eyes">
+<ellipse cx="58" cy="91" rx="20" ry="22" fill="#fff" stroke="#b58b48" stroke-width="2"/>
+<ellipse cx="122" cy="91" rx="20" ry="22" fill="#fff" stroke="#b58b48" stroke-width="2"/>
+<circle cx="58" cy="92" r="15" fill="url(#iris)"/><circle cx="122" cy="92" r="15" fill="url(#iris)"/>
+<circle cx="58" cy="93" r="8" fill="#251b13"/><circle cx="122" cy="93" r="8" fill="#251b13"/>
+<circle cx="53" cy="86" r="5" fill="#fff"/><circle cx="117" cy="86" r="5" fill="#fff"/>
+</g>
+<path d="M85 112 Q90 119 95 112" fill="none" stroke="#c0ab82" stroke-width="2" stroke-linecap="round"/>
+<ellipse cx="46" cy="117" rx="10" ry="5" fill="#eac6aa" opacity=".5"/><ellipse cx="134" cy="117" rx="10" ry="5" fill="#eac6aa" opacity=".5"/>
+<g class="mouth"><path d="M69 134 Q90 143 111 134 Q105 154 90 154 Q75 154 69 134Z" fill="#463023" stroke="#ac8050" stroke-width="2"/><path d="M73 137 Q90 144 107 137" fill="none" stroke="#fffaf1" stroke-width="4" stroke-linecap="round"/></g>
+<path d="M33 116 L45 139 M147 116 L135 139" stroke="url(#gold)" stroke-width="3" fill="none"/>
+</svg></div><div><h1>Luree AI Agent</h1><p>مساعدك لإدارة وتحليل متجر Luree Fashions</p></div></div>
 <div class="controls"><button id="mic" type="button">🎤 إملاء رسالة</button><button id="voice" type="button" aria-pressed="false">الصوت: متوقف</button><button id="replay" type="button" disabled>قراءة آخر رد</button><button id="stop" type="button">إيقاف الصوت</button></div>
 </header>
 <section id="messages" aria-live="polite">

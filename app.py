@@ -236,9 +236,11 @@ def products():
         "count": len(products_list),
         "products": products_list
     })
-    @app.route("/analyze")
-    def analyze():
-        data, error = shopify_graphql(PRODUCT_QUERY)
+
+
+@app.route("/analyze")
+def analyze():
+    data, error = shopify_graphql(PRODUCT_QUERY)
 
     if error:
         return jsonify({

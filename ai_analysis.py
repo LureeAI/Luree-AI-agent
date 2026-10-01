@@ -1,6 +1,6 @@
 from flask import Blueprint, jsonify
 
-ai_analysis = Blueprint("ai_analysis", name)
+ai_analysis = Blueprint("ai_analysis", __name__)
 
 
 def analyze_products(products):
@@ -76,5 +76,4 @@ def analyze_products(products):
 
 @ai_analysis.route("/analysis/health", methods=["GET"])
 def analysis_health():
-    return jsonify({
-        "
+    return jsonify({"success": True, "status": "ready"})

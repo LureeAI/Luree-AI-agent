@@ -1,55 +1,27 @@
 import json
-
+import logging
 from llm_service import ask_llm
 from shopify_service import get_store_context
+from database import load_messages, get_preferences, save_exchange
 
 
 def build_store_context():
-    store_data = get_store_context()
-
-    return json.dumps(
-        store_data,
-        ensure_ascii=False,
-        indent=2,
-        default=str,
-    )
+    context = json.dumps(get_store_context(), ensure_ascii=False, default=str)
+    if len(context) > 250000:
+        raise RuntimeError('Store context requires bulk analysis')
+    return context
 
 
 def run_agent(message):
-    if message is None:
-        message = ""
-
-    message = str(message).strip()
-
-    if not message:
-        return {
-            "success": False,
-            "error": "Message is required",
-        }
-
     try:
+        history = load_messages(20)
+        preferences = get_preferences()
         store_context = build_store_context()
-
-        answer = ask_llm(
-            message=message,
-            store_context=store_context,
-        )
-
-        return {
-            "success": True,
-            "agent": "Luree AI Agent",
-            "answer": answer,
-        }
-
-    except RuntimeError as error:
-        return {
-            "success": False,
-            "error": str(error),
-        }
-
-    except Exception as error:
-        return {
-            "success": False,
-            "error": "Agent request failed",
-            "details": str(error),
-        }
+        answer = ask_llm(message, store_context, history, preferences)
+        if not answer or not answer.strip():
+            raise RuntimeError('Empty model response')
+        save_exchange(message, answer)
+        return {'success': True, 'agent': 'Luree AI Agent', 'answer': answer, 'memory_saved': True}
+    except Exception:
+        logging.exception('Agent request failed')
+        return {'success': False, 'error': 'تعذّر إكمال الطلب أو حفظ المحادثة. جرّبي مجددًا.'}

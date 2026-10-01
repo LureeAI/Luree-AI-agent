@@ -6,7 +6,7 @@ import secrets
 from urllib.parse import urlencode
 
 import requests
-from flask import Blueprint, redirect, request, jsonify
+from flask import Blueprint, redirect, request, jsonify, session
 
 shopify_auth = Blueprint("shopify_auth", __name__)
 
@@ -51,6 +51,7 @@ def shopify_connect():
         }), 500
 
     oauth_state = secrets.token_urlsafe(32)
+    session["oauth_state"] = oauth_state
 
     params = {
         "client_id": SHOPIFY_API_KEY,
@@ -83,7 +84,7 @@ def shopify_callback():
             "error": "Missing OAuth parameters"
         }), 400
 
-    if state != oauth_state:
+    if not session.get("oauth_state") or not hmac.compare_digest(state, session["oauth_state"]):
         return jsonify({
             "success": False,
             "error": "Invalid OAuth state"
@@ -108,6 +109,9 @@ def shopify_callback():
         }), 400
 
     shop = clean_shop_domain(shop)
+    if shop != clean_shop_domain():
+        return jsonify(success=False, error='Unexpected shop'), 400
+    session.pop('oauth_state', None)
 
     response = requests.post(
         f"https://{shop}/admin/oauth/access_token",
@@ -145,76 +149,9 @@ def shopify_callback():
     })
 @shopify_auth.route("/shopify/products")
 def shopify_products():
-    if not shopify_access_token or not connected_shop:
-        return jsonify({
-            "success": False,
-            "error": "Shopify is not connected"
-        }), 401
-
-    query = """
-    query {
-      products(first: 20) {
-        nodes {
-          id
-          title
-          status
-          totalInventory
-          productType
-          vendor
-        }
-      }
-    }
-    """
-
-    url = f"https://{connected_shop}/admin/api/{API_VERSION}/graphql.json"
-
+    from shopify_service import get_products
     try:
-        response = requests.post(
-            url,
-            headers={
-                "X-Shopify-Access-Token": shopify_access_token,
-                "Content-Type": "application/json"
-            },
-            json={"query": query},
-            timeout=30
-        )
-
-        result = response.json()
-
-    except requests.RequestException as error:
-        return jsonify({
-            "success": False,
-            "error": "Could not contact Shopify",
-            "details": str(error)
-        }), 502
-
-    except ValueError:
-        return jsonify({
-            "success": False,
-            "error": "Shopify returned invalid JSON",
-            "status_code": response.status_code
-        }), 502
-
-    if response.status_code != 200:
-        return jsonify({
-            "success": False,
-            "error": "Shopify API request failed",
-            "status_code": response.status_code,
-            "response": result
-        }), response.status_code
-
-    if result.get("errors"):
-        return jsonify({
-            "success": False,
-            "error": "Shopify GraphQL error",
-            "response": result
-        }), 400
-
-    products = result.get("data", {}).get("products", {}).get("nodes", [])
-
-    return jsonify({
-        "success": True,
-        "shop": connected_shop,
-        "product_count": len(products),
-        "products": products
-    })    
+        products = get_products()
+        return jsonify(success=True, product_count=len(products), products=products)
+    except Exception:
+        return jsonify(success=False, error='Could not read all accessible products'), 502

@@ -7,7 +7,7 @@ from agent_routes import agent_routes
 
 from chat_ui import chat_ui
 
-app = Flask(name)
+app = Flask(__name__)
 app.register_blueprint(shopify_auth)
 app.register_blueprint(agent_routes)
 app.register_blueprint(chat_ui)

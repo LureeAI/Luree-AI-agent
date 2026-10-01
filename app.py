@@ -6,8 +6,11 @@ from shopify_auth import shopify_auth
 from agent_routes import agent_routes
 
 from chat_ui import chat_ui
+from access_control import init_access
+from shopify_service import get_products
 
 app = Flask(__name__)
+init_access(app)
 app.register_blueprint(shopify_auth)
 app.register_blueprint(agent_routes)
 app.register_blueprint(chat_ui)
@@ -221,15 +224,11 @@ def home():
 
 @app.route("/products")
 def products():
-    data, error = shopify_graphql(PRODUCT_QUERY)
-
-    if error:
-        return jsonify({
-            "success": False,
-            "error": error
-        }), 500
-
-    products_list = data.get("products", {}).get("nodes", [])
+    try:
+        products_list = get_products()
+    except Exception:
+        app.logger.exception('Products read failed')
+        return jsonify(success=False, error='تعذّر قراءة المنتجات كاملة.'), 502
 
     return jsonify({
         "success": True,
@@ -240,15 +239,11 @@ def products():
 
 @app.route("/analyze")
 def analyze():
-    data, error = shopify_graphql(PRODUCT_QUERY)
-
-    if error:
-        return jsonify({
-            "success": False,
-            "error": error
-        }), 500
-
-    products_list = data.get("products", {}).get("nodes", [])
+    try:
+        products_list = get_products()
+    except Exception:
+        app.logger.exception('Analysis read failed')
+        return jsonify(success=False, error='تعذّر قراءة المنتجات كاملة.'), 502
 
     active = 0
     draft = 0
@@ -282,8 +277,9 @@ def analyze():
             except (ValueError, TypeError):
                 pass
 
-        min_price = min(prices) if prices else 0
-        max_price = max(prices) if prices else 0
+        price_range = product.get('priceRangeV2', {})
+        min_price = float(price_range.get('minVariantPrice', {}).get('amount', 0))
+        max_price = float(price_range.get('maxVariantPrice', {}).get('amount', 0))
 
         issues = []
 
@@ -320,3 +316,9 @@ def analyze():
         },
         "products": product_results
     })
+
+
+
+@app.get('/health')
+def health():
+    return jsonify(status='running')

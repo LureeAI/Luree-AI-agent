@@ -1,4 +1,5 @@
 from flask import Blueprint, Response
+from access_control import csrf_token
 
 chat_ui = Blueprint("chat_ui", __name__)
 
@@ -7,6 +8,7 @@ PAGE = r"""
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Luree AI Agent</title>
 <style>
@@ -79,6 +81,8 @@ button:disabled{opacity:.5}
 <path d="M33 116 L45 139 M147 116 L135 139" stroke="url(#gold)" stroke-width="3" fill="none"/>
 </svg></div><div><h1>Luree AI Agent</h1><p>مساعدك لإدارة وتحليل متجر Luree Fashions</p></div></div>
 <div class="controls"><button id="mic" type="button">🎤 إملاء رسالة</button><button id="voice" type="button" aria-pressed="false">الصوت: متوقف</button><button id="replay" type="button" disabled>قراءة آخر رد</button><button id="stop" type="button">إيقاف الصوت</button></div>
+<div class="controls"><button id="logout" type="button">تسجيل خروج</button></div>
+<details><summary>تعليماتي المحفوظة</summary><p>اكتبي قواعد المتجر وتفضيلاتك ليستخدمها الوكيل في كل محادثة.</p><textarea id="preferences" maxlength="4000" rows="3" aria-label="تعليمات محفوظة"></textarea><button id="save-memory" type="button">حفظ التعليمات</button></details>
 </header>
 <section id="messages" aria-live="polite">
 <div class="bubble agent">أهلًا غصون، شو بتحبي نحلّل بمتجرك اليوم؟</div>
@@ -100,7 +104,9 @@ const face = document.getElementById('face');
 const mic = document.getElementById('mic');
 const voice = document.getElementById('voice');
 const replay = document.getElementById('replay');
+const csrf = document.querySelector('meta[name=csrf-token]').content;
 const synth = window.speechSynthesis;
+send.disabled = true;
 let voiceEnabled = false, lastAnswer = '', busy = false, listening = false;
 function setFace(state) { face.className = state; }
 function stopVoice() { if (synth) synth.cancel(); setFace(busy ? 'thinking' : listening ? 'listening' : ''); }
@@ -183,12 +189,13 @@ document.getElementById('form').addEventListener('submit', async (event) => {
   try {
     const response = await fetch('/ai/chat', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'X-CSRF-Token': csrf},
       body: JSON.stringify({message: message})
     });
+    if (response.status === 401) { window.location.href = '/login'; return; }
     const data = await response.json();
     if (!response.ok || !data.success) {
-      throw new Error('تعذّر الحصول على الرد. جرّبي مرة ثانية.');
+      throw new Error(data.error || 'تعذّر الحصول على الرد. جرّبي مرة ثانية.');
     }
     lastAnswer = data.answer || '';
     add(lastAnswer || 'لم يصل نص الرد.', 'agent');
@@ -205,6 +212,34 @@ document.getElementById('form').addEventListener('submit', async (event) => {
     input.focus();
   }
 });
+
+async function loadMemory() {
+  try {
+    const responses = await Promise.all([fetch('/ai/history'), fetch('/ai/memory')]);
+    if (responses.some(r => r.status === 401)) { window.location.href = '/login'; return; }
+    if (responses.some(r => !r.ok)) throw new Error('تعذّر تحميل الذاكرة. حدّثي الصفحة للمحاولة مجددًا.');
+    const [history, memory] = await Promise.all(responses.map(r => r.json()));
+    if (history.messages.length) messages.replaceChildren();
+    history.messages.forEach(item => add(item.content, item.role === 'user' ? 'user' : 'agent'));
+    const last = [...history.messages].reverse().find(item => item.role === 'assistant');
+    lastAnswer = last ? last.content : ''; replay.disabled = !lastAnswer || !synth;
+    document.getElementById('preferences').value = memory.instructions;
+    send.disabled = false;
+  } catch (error) { status.textContent = error.message; }
+}
+document.getElementById('save-memory').addEventListener('click', async () => {
+  try {
+    const response = await fetch('/ai/memory', {method:'PUT', headers:{'Content-Type':'application/json','X-CSRF-Token':csrf}, body:JSON.stringify({instructions:document.getElementById('preferences').value})});
+    if (!response.ok) throw new Error('تعذّر حفظ التعليمات.');
+    status.textContent = 'تم حفظ تعليماتك.';
+  } catch(error) { status.textContent = error.message; }
+});
+document.getElementById('logout').addEventListener('click', async () => {
+  stopVoice();
+  await fetch('/logout', {method:'POST',headers:{'X-CSRF-Token':csrf}});
+  window.location.href = '/login';
+});
+loadMemory();
 </script>
 </body>
 </html>
@@ -213,4 +248,5 @@ document.getElementById('form').addEventListener('submit', async (event) => {
 
 @chat_ui.route("/assistant", methods=["GET"])
 def assistant_page():
-    return Response(PAGE, mimetype="text/html")
+    return Response(PAGE.replace("{{ csrf_token() }}", csrf_token()), mimetype="text/html")
+

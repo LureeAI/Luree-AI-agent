@@ -4,6 +4,7 @@ import requests
 from flask import Flask, jsonify
 from shopify_auth import shopify_auth
 from agent_routes import agent_routes
+
 from chat_ui import chat_ui
 
 app = Flask(name)

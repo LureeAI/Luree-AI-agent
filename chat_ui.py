@@ -2,7 +2,7 @@ from flask import Blueprint, Response
 
 chat_ui = Blueprint("chat_ui", __name__)
 
-PAGE = """
+PAGE = r"""
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
@@ -73,8 +73,31 @@ const synth = window.speechSynthesis;
 let voiceEnabled = false, lastAnswer = '', busy = false, listening = false;
 function setFace(state) { face.className = state; }
 function stopVoice() { if (synth) synth.cancel(); setFace(busy ? 'thinking' : listening ? 'listening' : ''); }
+function speechText(text) {
+  const arabic = /[\u0600-\u06ff]/.test(text);
+  let clean = String(text)
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/^\s*\|?[\s:|-]*-{3,}[\s:|-]*\|?\s*$/gm, '')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s*[-*+>]\s+/gm, '')
+    .replace(/[|]/g, arabic ? '، ' : ', ')
+    .replace(/[*_`~]/g, '')
+    .replace(/[\p{Extended_Pictographic}\uFE0F\u200D\u20E3]/gu, '')
+    .replace(/[ \t]+/g, ' ')
+    .split('\n').map(line => line.replace(/^[\s,،]+|[\s,،]+$/g, '')).filter(Boolean).join('. ');
+  if (arabic) {
+    clean = clean.replace(/\$\s*(\d+)(?:\.(\d{1,2}))?/g, (_, dollars, cents) =>
+      dollars + ' دولار' + (cents && Number(cents) ? ' و' + cents.padEnd(2, '0') + ' سنت' : ''));
+  }
+  return clean.trim();
+}
+
 function speak(text) {
   if (!synth) return;
+  text = speechText(text);
+  if (!text) return;
   stopVoice();
   const utterance = new SpeechSynthesisUtterance(text);
   const arabic = /[\u0600-\u06ff]/.test(text);

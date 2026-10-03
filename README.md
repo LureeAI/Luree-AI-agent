@@ -155,3 +155,52 @@ Choose Arabic (`ar`), English (`en`), Korean (`ko`), or all three in the video p
 
 ### Automatic conversation recall
 Each chat request searches all older stored messages for related keywords and adds bounded excerpts and nearby turns alongside the latest 20 messages and saved preferences. A standard PostgreSQL GIN full-text index supports Arabic, English and Korean Unicode terms using the simple dictionary. Retrieval is store-scoped, capped at six hits, eighteen excerpts and 12,000 content characters, with no duplicate recent messages. This is keyword/prefix retrieval, not semantic embeddings: paraphrases, Arabic spelling variants and Korean spacing differences may not match. Old excerpts are historical evidence, never approval to execute an action. No new service or external search/TTS API is needed. Excerpts increase model input usage. The index is created automatically; its first build can take time on a large history.
+
+## Owner-reviewed product preparation
+
+The preparation panel works on **existing Shopify products**. Import a chosen
+AliExpress product using DSers as a Shopify draft with the supplier mapping first.
+This change does not provide a merchant DSers API, import AliExpress links, or
+independently check supplier availability. Recorded Shopify stock and owner
+supplier confirmation are labeled separately. Supplier URLs are provenance only.
+
+The owner enters a proposed uniform variant price, maximum variant purchase cost,
+shipping cost and payment fees, all in shop currency. Missing inputs are not zero.
+The Decimal calculation reports contribution and break-even before ads, taxes,
+returns or other omitted expenses. The chat has read-only pricing and detailed
+product tools for discussion. Final prices are selected in the panel, not by the
+model. English copy/SEO generation uses OpenAI; the owner can edit everything.
+Sizes/options are preserved, and unsupported garment facts must not be invented.
+Copy generation sends product data and up to the first 12 eligible Shopify CDN photos to OpenAI for a proposed media order; unseen media must not be described as inspected. Existing media can be reordered, not deleted or regenerated. A proposed uniform
+price also clears old compare-at prices, which is disclosed in the preview.
+
+Previews persist in `agent_product_preparations` scoped to the connected shop.
+Owner approval writes prices, copy/SEO and image order, then optionally activates
+and publishes to an explicitly selected Shopify publication. Activating a draft
+can expose it on previously assigned channels too; the panel discloses this.
+Publishing requires owner supplier confirmation and complete price inputs.
+Never recreate options/variants, change SKUs, inventory quantities, fulfillment
+settings or handle, so existing DSers identifiers are preserved; mapping is not
+independently validated. `write_products` is needed for editing and
+`read_publications`/`write_publications` for publication. Existing installations
+must grant the new scopes via Shopify app settings and reconnect; deploying code
+alone does not grant them. Without publication scopes, edit-only preparation works.
+
+Approval commits an executing claim before external writes. Stale full product
+snapshots fail before writes; partial mutations, timeout or process loss must be
+manually reconciled in Shopify and are never automatically retried. These operations
+are not a cross-mutation atomic transaction, and Shopify does not provide a compare-
+and-swap guard here; concurrent outside edits can still race preflight. Execution
+state and last stage remain visible. Reconcile an uncertain operation in Shopify,
+then use the explicit owner reconciliation control before making another proposal.
+
+Endpoints under `/ai/product-preparations`: GET/POST root; GET product and
+publications; POST copy, price, `<id>/approve`, `<id>/reject`, `<id>/reconcile`.
+All are behind existing owner login and writes require CSRF. Limits: 100 variants
+and media, 20 pending previews, and 24-hour approval expiry. Live store writes and
+DSers mapping have not been exercised by the unit suite.
+
+The default Gunicorn configuration uses a 180-second worker timeout for the
+multi-step approval request. A custom start command can override this setting.
+Copy generation has a 90-second timeout and no automatic OpenAI retries.
+Preparation request bodies have a 64 KiB cap; field-level limits still apply.

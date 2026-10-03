@@ -1,3 +1,4 @@
+import logging
 """Durable job queue and MP4 outputs in standard PostgreSQL."""
 import json
 import re
@@ -129,21 +130,28 @@ def process_one_video():
             return False
         aid,snapshot=row
         conn.execute("UPDATE agent_videos SET state='rendering',started_at=NOW() WHERE id=%s",(aid,))
+    stage='photos'
     try:
         with tempfile.TemporaryDirectory(prefix='luree-video-') as directory:
             photos=[download_photo(image['url']) for image in snapshot['images']]
+            stage='render'
             silent=render_video(photos,snapshot['title'],snapshot['price'],Path(directory)/'silent.mp4')
+            stage='music'
             music=make_music(Path(directory)/'music.wav')
+            stage='narration'
             voice=make_narration(snapshot['narration'],Path(directory)/'voice.wav',snapshot.get('language','en')) if snapshot.get('include_voice') else None
+            stage='audio_merge'
             output=mux_audio(silent,music,voice,Path(directory)/'dress.mp4')
             if output.stat().st_size>MAX_VIDEO_BYTES:
                 raise RuntimeError('Video is too large')
+            stage='storage'
             video=output.read_bytes()
         with _connect() as conn:
             prepare(conn)
             conn.execute("""UPDATE agent_videos SET state='ready',video=%s,completed_at=NOW()
                 WHERE id=%s AND shop=%s AND state='rendering'""",(video,aid,shop))
-    except Exception:
+    except Exception as error:
+        logging.error('Video job %s failed at %s (%s)',aid,stage,type(error).__name__)
         # No raw provider error/URL/credentials returned to the client.
         with _connect() as conn:
             prepare(conn)

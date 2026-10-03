@@ -42,6 +42,22 @@ class AudioTests(unittest.TestCase):
         with self.assertRaises(video_service.VideoError):
             video_service.create_video_job('product',['img'],True,True,'word '*41)
 
+    def test_streaming_wav_unknown_length_uses_actual_samples(self):
+        with tempfile.TemporaryDirectory() as d:
+            path=Path(d)/'voice.wav'
+            with wave.open(str(path),'wb') as source:
+                source.setnchannels(1);source.setsampwidth(2);source.setframerate(24000)
+                source.writeframes(b'\0\0'*24000*5)
+            payload=bytearray(path.read_bytes())
+            payload[4:8]=b'\xff'*4
+            offset=payload.index(b'data')+4
+            payload[offset:offset+4]=b'\xff'*4
+            path.write_bytes(payload)
+            with patch('video_audio.subprocess.run') as run:
+                mux_audio('video.mp4','music.wav',path,Path(d)/'out.mp4')
+                run.assert_called_once()
+                self.assertIn('atempo=1.000000',str(run.call_args))
+
     def test_long_narration_refuses_cutting_words(self):
         with tempfile.TemporaryDirectory() as d:
             path=Path(d)/'voice.wav'

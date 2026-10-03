@@ -19,6 +19,9 @@ API_VERSION = "2026-04"
 
 SCOPES = ",".join([
     "read_products",
+    "write_products",
+    "read_publications",
+    "write_publications",
     "read_inventory",
     "read_locations",
     "read_orders",
@@ -155,3 +158,4 @@ def shopify_products():
         return jsonify(success=True, product_count=len(products), products=products)
     except Exception:
         return jsonify(success=False, error='Could not read all accessible products'), 502
+

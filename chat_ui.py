@@ -13,6 +13,10 @@ PAGE = r"""
 <title>Luree AI Agent</title>
 <style>
 *{box-sizing:border-box}
+#product-preparer label{display:block;margin:8px 0}
+#product-preparer textarea{display:block;width:100%}
+#product-preparer select{max-width:100%;padding:8px}
+#product-preparer input:not([type=checkbox]){max-width:100%;padding:8px}
 body{margin:0;background:#10121a;color:#eee;
 font-family:Arial,sans-serif}
 main{max-width:760px;margin:auto;height:100dvh;
@@ -86,6 +90,38 @@ button:disabled{opacity:.5}
 <details><summary>تنبيهات المخزون</summary><p id="inventory-status"></p><p>الحد: ٥٠ قطعة من مجموع مخزون المنتج. روابط الموردين للبحث فقط.</p><div id="inventory-alerts" style="max-height:200px;overflow:auto"></div></details>
 <details><summary>الإعلانات: TikTok وFacebook وInstagram</summary><p id="marketing-status">جاري تحميل حالة الربط…</p><button type="button" id="marketing-report">قراءة نتائج آخر ٧ أيام</button><button type="button" id="marketing-plan">تحليل الإعلانات وتحضير خطة</button><div id="marketing-results" style="max-height:200px;overflow:auto"></div></details>
 <details><summary>إجراءات تنتظر موافقتي</summary><p>راجعي التغيير قبل الموافقة. هذه النسخة تدعم عنوان ووصف المنتج وإيقاف حملة Meta.</p><div id="actions" style="max-height:200px;overflow:auto"></div></details>
+<details id="product-preparer"><summary>تجهيز فستان ومناقشة سعره</summary>
+<p>استوردي الفستان عبر DSers إلى Shopify كمسودة أولًا، مع ربط المورّد. هنا نجهّز النصوص والسعر وترتيب الصور دون تغيير الألوان والمقاسات أو معرّفاتها. التحقق المباشر من مخزون المورّد غير متاح بعد.</p>
+<label>الفستان <select id="prep-product"><option value="">اختاري الفستان…</option></select></label>
+<p id="prep-stock"></p>
+<div style="display:grid;gap:8px">
+<label>سعر البيع المقترح لكل المقاسات <input id="prep-price" type="number" min="0.01" step="0.01"></label>
+<label>أعلى تكلفة شراء بين الخيارات <input id="prep-cost" type="number" min="0" step="0.01"></label>
+<label>تكلفة الشحن <input id="prep-shipping" type="number" min="0" step="0.01"></label>
+<label>رسوم الدفع ٪ <input id="prep-fee" type="number" min="0" max="99.99" step="0.01"></label>
+<label>رسوم ثابتة <input id="prep-fixed" type="number" min="0" step="0.01"></label>
+</div>
+<p>كل المبالغ بعملة المتجر. اتركي المجهول فارغًا؛ أدخلي صفرًا فقط إذا تأكدتِ أنه صفر. الحساب لا يشمل الإعلان والضرائب والمرتجعات.</p>
+<button id="prep-review" type="button">احسبي السعر والربح</button><button id="prep-discuss" type="button">ناقشي السعر مع الوكيل</button>
+<p id="prep-price-result" style="white-space:pre-wrap"></p>
+<label>توجيهاتك للنص <textarea id="prep-notes" maxlength="2000" rows="2"></textarea></label>
+<button id="prep-generate" type="button">جهّزي النصوص وترتيب الصور</button>
+<p>التجهيز يرسل معلومات المنتج وحتى ١٢ صورة إلى OpenAI ويستهلك الرصيد. يرتّب الصور الموجودة ولا يعيد رسم الفستان. النصوص للمتجر بالإنكليزية، وبتقدري تعدليها قبل الموافقة.</p>
+<label>الاسم <textarea id="prep-title" maxlength="255" rows="2"></textarea></label>
+<label>الوصف وجدول المقاسات المتوفر <textarea id="prep-description" maxlength="6000" rows="5"></textarea></label>
+<label>عنوان البحث <textarea id="prep-seo-title" maxlength="70" rows="1"></textarea></label>
+<label>وصف البحث <textarea id="prep-seo-description" maxlength="320" rows="2"></textarea></label>
+<p>ترتيب الصور: اختاري الصورة الرئيسية وانقلي الصور للأعلى أو الأسفل. لا تُحذف الصور ولا تتغير صور الخيارات المرتبطة.</p>
+<div id="prep-media"></div>
+<label>رابط المورّد (للتوثيق فقط) <input id="prep-supplier" type="url"></label>
+<label><input id="prep-confirm" type="checkbox"> راجعت بنفسي ربط المورّد وتوفر الألوان والمقاسات في DSers/AliExpress</label>
+<label>النشر بعد الموافقة <select id="prep-publication"><option value="">تعديل فقط؛ الحفاظ على حالة النشر الحالية</option></select></label>
+<p id="prep-channel-note"></p>
+<p>السعر المدخل سيطبّق على كل الخيارات، وسيُزال سعر المقارنة القديم لتجنب عرض خصم غير صحيح. إذا المنتج منشور حاليًا، التعديلات ستظهر عليه عند التنفيذ. اختيار النشر يفعّل المنتج وقد يجعله ظاهرًا أيضًا في القنوات المرتبط بها سابقًا.</p>
+<button id="prep-save" type="button">حفظ معاينة للموافقة</button><p id="prep-status" role="status"></p>
+<div id="prep-list"></div>
+</details>
+
 <details id="video-builder"><summary>إنشاء فيديو فستان</summary>
 <p>فيديو عمودي ١٥ ثانية: افتتاحية، صور المنتج بحركة وانتقالات، موسيقى أصلية، السعر، ودعوة للشراء. اختاري صور اللون المطلوب.</p>
 <label>الفستان <select id="video-product" style="max-width:100%;padding:8px"><option value="">اختاري الفستان…</option></select></label>
@@ -484,6 +520,70 @@ createVideo.addEventListener('click',async()=>{
   } catch(error) { videoStatus.textContent=error.message; }
   finally {videoBusy=false;createVideo.disabled=!document.querySelector('#video-photos input:checked');}
 });
+const prepBuilder=document.getElementById('product-preparer');
+const prepSelect=document.getElementById('prep-product');
+const prepStatus=document.getElementById('prep-status');
+let prepLoaded=false,prepVersion=0,prepProduct=null,prepMedia=[];
+function prepValue(id){return document.getElementById('prep-'+id).value;}
+function priceInputs(){return {price:prepValue('price'),cost:prepValue('cost'),shipping:prepValue('shipping'),fee_percent:prepValue('fee'),fixed_fee:prepValue('fixed')};}
+async function prepPost(path,body){return videoFetch(path,{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},body:JSON.stringify(body)});}
+function priceText(r,currency){return 'السعر: '+r.sale_price+' '+currency+'\n'+(r.complete?'فرق بعد التكاليف المدخلة: '+r.estimated_profit+' ('+r.margin_percent+'٪)\nتعادل التكاليف عند: '+r.break_even+'\n':'')+r.message;}
+function drawPrepMedia(){
+ const root=document.getElementById('prep-media');root.replaceChildren();
+ prepMedia.forEach((m,i)=>{
+  const row=document.createElement('div');row.style.cssText='display:flex;align-items:center;gap:8px;margin:8px 0';
+  if(m.image?.url){const img=document.createElement('img');img.src=m.image.url;img.alt=m.alt||'صورة المنتج';img.style.cssText='width:70px;height:85px;object-fit:contain';row.append(img);}
+  const label=document.createElement('span');label.textContent=(i===0?'الصورة الرئيسية':String(i+1))+(m.mediaContentType!=='IMAGE'?' — '+m.mediaContentType:'');row.append(label);
+  for(const [delta,name] of [[-1,'↑'],[1,'↓']]){const b=document.createElement('button');b.type='button';b.textContent=name;b.disabled=i+delta<0||i+delta>=prepMedia.length;b.addEventListener('click',()=>{[prepMedia[i],prepMedia[i+delta]]=[prepMedia[i+delta],prepMedia[i]];drawPrepMedia();});row.append(b);}
+  root.append(row);
+ });
+}
+async function loadPreparations(){
+ try{
+  const data=await videoFetch('/ai/product-preparations');const root=document.getElementById('prep-list');root.replaceChildren();
+  for(const job of data.preparations){
+   const p=job.proposal,before=job.before;const box=document.createElement('div');box.className='bubble agent';
+   const states={pending:'بانتظار الموافقة',executing:'بدأ التنفيذ؛ إذا استمر راجعي Shopify ولا تكرريه',completed:'تم التنفيذ',needs_review:'تنفيذ جزئي أو غير مؤكد؛ راجعي Shopify قبل أي إعادة',failed:'لم يبدأ تعديل المنتج؛ جهزي اقتراحًا جديدًا',expired:'انتهت صلاحية الاقتراح',rejected:'مرفوض',reconciled:'تمت مراجعة النتيجة يدويًا؛ ليست شهادة نجاح آلي'};
+   const copy=document.createElement('p');copy.textContent='تجهيز #'+job.id+' — '+(states[job.state]||job.state)+'\nمرحلة: '+job.stage+'\nقبل: '+before.title+'\nبعد: '+p.title+'\n'+p.description+'\nعنوان البحث: '+p.seo_title+'\nوصف البحث: '+p.seo_description+'\n'+priceText(p.price_review,before.currency)+'\nأسعار الخيارات الحالية: '+before.variants.nodes.map(v=>v.title+': '+v.price).join('، ')+'\nسعر جديد لكل الخيارات: '+p.price+'؛ إزالة أسعار المقارنة\nالنشر: '+(p.publication_name||'الحفاظ على الحالة الحالية: '+before.status)+'\nالمورّد: '+(p.supplier_url||'لم يحدد رابط')+'\nتأكيد المورّد من المالكة: '+(p.supplier_confirmed_by_owner?'نعم':'لا')+'؛ تحقق الوكيل المباشر: غير متاح';box.append(copy);
+   const old=document.createElement('details');const summary=document.createElement('summary');summary.textContent='الوصف السابق للمقارنة';const content=document.createElement('p');content.textContent=before.descriptionHtml;old.append(summary,content);box.append(old);
+   const gallery=document.createElement('div');gallery.style.cssText='display:flex;flex-wrap:wrap;gap:6px';
+   for(const mid of p.media_order){const m=before.media.nodes.find(x=>x.id===mid);if(m?.image?.url){const img=document.createElement('img');img.src=m.image.url;img.alt=m.alt||'ترتيب الصورة المقترح';img.style.cssText='width:55px;height:70px;object-fit:contain';gallery.append(img);}}box.append(gallery);
+   if(job.state==='pending')for(const [decision,label] of [['approve','موافقة وتنفيذ التعديلات'+(p.publication_id?' والنشر':'')],['reject','رفض']]){
+    const btn=document.createElement('button');btn.type='button';btn.textContent=label;
+    btn.addEventListener('click',async()=>{box.querySelectorAll('button').forEach(b=>b.disabled=true);try{const r=await prepPost('/ai/product-preparations/'+job.id+'/'+decision,{});prepStatus.textContent=states[r.state]||r.state;}catch(e){prepStatus.textContent=e.message;}await loadPreparations();});box.append(btn);
+   }
+   if(job.state==='needs_review'||job.state==='executing'){
+    const check=document.createElement('input');check.type='checkbox';const label=document.createElement('label');label.append(check,document.createTextNode(' راجعت Shopify بنفسي وحسمت نتيجة هذا التنفيذ'));
+    const btn=document.createElement('button');btn.type='button';btn.textContent='تسجيل انتهاء المراجعة فقط';btn.disabled=true;check.addEventListener('change',()=>btn.disabled=!check.checked);
+    btn.addEventListener('click',async()=>{btn.disabled=true;try{await prepPost('/ai/product-preparations/'+job.id+'/reconcile',{confirmed:true});await loadPreparations();}catch(e){prepStatus.textContent=e.message;btn.disabled=false;}});box.append(label,btn);
+   }
+   root.append(box);
+  }
+ }catch(e){prepStatus.textContent=e.message;}
+}
+prepBuilder.addEventListener('toggle',async()=>{
+ if(!prepBuilder.open)return;await loadPreparations();if(prepLoaded)return;
+ try{const data=await videoFetch('/products');for(const p of data.products){const o=document.createElement('option');o.value=p.id;o.textContent=p.title+' — '+p.status;prepSelect.append(o);}prepLoaded=true;}catch(e){prepStatus.textContent=e.message;}
+ try{const data=await videoFetch('/ai/product-preparations/publications');const s=document.getElementById('prep-publication');for(const p of data.publications){const o=document.createElement('option');o.value=p.id;o.textContent=p.name;s.append(o);}}catch(e){document.getElementById('prep-channel-note').textContent=e.message;}
+});
+prepSelect.addEventListener('change',async()=>{
+ const version=++prepVersion;prepProduct=null;prepMedia=[];drawPrepMedia();
+ if(!prepSelect.value)return;prepStatus.textContent='جاري قراءة الفستان…';
+ try{const d=await videoFetch('/ai/product-preparations/product?id='+encodeURIComponent(prepSelect.value));if(version!==prepVersion)return;prepProduct=d.product;
+ document.getElementById('prep-stock').textContent='عملة المتجر: '+prepProduct.currency+' — مخزون Shopify: '+prepProduct.variants.nodes.map(v=>v.title+': '+v.inventoryQuantity).join('، ')+'\n'+prepProduct.supplier_inventory.message;
+ document.getElementById('prep-price').value=prepProduct.variants.nodes[0]?.price||'';
+ document.getElementById('prep-title').value=prepProduct.title;
+ const parsed=new DOMParser().parseFromString(prepProduct.descriptionHtml,'text/html');parsed.querySelectorAll('script,style').forEach(n=>n.remove());parsed.querySelectorAll('br').forEach(n=>n.replaceWith('\n'));parsed.querySelectorAll('td,th').forEach(n=>n.append(' | '));parsed.querySelectorAll('p,tr,li,h1,h2,h3').forEach(n=>n.append('\n'));document.getElementById('prep-description').value=parsed.body.textContent.trim();
+ document.getElementById('prep-seo-title').value=prepProduct.seo?.title||'';document.getElementById('prep-seo-description').value=prepProduct.seo?.description||'';
+ for(const id of ['cost','shipping','fee','fixed','supplier','notes'])document.getElementById('prep-'+id).value='';document.getElementById('prep-confirm').checked=false;document.getElementById('prep-publication').value='';document.getElementById('prep-price-result').textContent='';
+ prepMedia=[...prepProduct.media.nodes];drawPrepMedia();prepStatus.textContent='الفستان جاهز للمراجعة؛ لم يتم تعديله.';
+ }catch(e){if(version===prepVersion)prepStatus.textContent=e.message;}
+});
+document.getElementById('prep-review').addEventListener('click',async()=>{try{if(!prepProduct)throw new Error('اختاري الفستان أولًا.');const d=await prepPost('/ai/product-preparations/price',priceInputs());document.getElementById('prep-price-result').textContent=priceText(d.review,prepProduct.currency);}catch(e){prepStatus.textContent=e.message;}});
+document.getElementById('prep-discuss').addEventListener('click',()=>{if(!prepProduct){prepStatus.textContent='اختاري الفستان أولًا.';return;}input.value='ناقش معي سعر هذا الفستان دون تنفيذ أي تعديل: '+prepProduct.title+'، المعرف '+prepProduct.id+'، العملة '+prepProduct.currency+'، المبالغ التي أدخلتها '+JSON.stringify(priceInputs())+'. اذكر التكاليف الناقصة ولا تفترض أنها صفر، وميّز الربح قبل الإعلان عن الربح الصافي.';input.focus();});
+document.getElementById('prep-generate').addEventListener('click',async function(){const version=prepVersion;this.disabled=true;try{if(!prepProduct)throw new Error('اختاري الفستان أولًا.');const d=await prepPost('/ai/product-preparations/copy',{product_id:prepProduct.id,notes:prepValue('notes')});if(version!==prepVersion)return;for(const [key,id] of [['title','title'],['description','description'],['seo_title','seo-title'],['seo_description','seo-description']])document.getElementById('prep-'+id).value=d.copy[key];prepMedia=d.copy.media_order.map(id=>prepProduct.media.nodes.find(m=>m.id===id));drawPrepMedia();prepStatus.textContent='راجعي النصوص والمقاسات؛ لم يتم تعديل المنتج.';}catch(e){prepStatus.textContent=e.message;}finally{this.disabled=false;}});
+document.getElementById('prep-save').addEventListener('click',async function(){this.disabled=true;try{if(!prepProduct)throw new Error('اختاري الفستان أولًا.');await prepPost('/ai/product-preparations',{product_id:prepProduct.id,proposal:{...priceInputs(),source_revision:prepProduct.revision,title:prepValue('title'),description:prepValue('description'),seo_title:prepValue('seo-title'),seo_description:prepValue('seo-description'),media_order:prepMedia.map(m=>m.id),publication_id:prepValue('publication'),supplier_url:prepValue('supplier'),supplier_confirmed_by_owner:document.getElementById('prep-confirm').checked}});prepStatus.textContent='حُفظت المعاينة أدناه؛ راجعيها ثم وافقي. لم يبدأ التنفيذ.';await loadPreparations();}catch(e){prepStatus.textContent=e.message;}finally{this.disabled=false;}});
+
 const videoTimer=setInterval(loadVideos,5000);
 window.addEventListener('pagehide',()=>clearInterval(videoTimer));
 

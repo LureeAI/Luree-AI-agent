@@ -141,3 +141,88 @@ def remove_video(video_id):
         return jsonify(success=True)
     except Exception:
         return jsonify(success=False,error='تعذّر حذف الفيديو.'),503
+
+@agent_routes.get('/ai/product-preparations/product')
+def preparation_product():
+    from product_workflow import details, PreparationError
+    try:
+        return jsonify(success=True, product=details(request.args.get('id','')))
+    except PreparationError as exc:
+        return jsonify(success=False,error=str(exc)),400
+    except Exception:
+        return jsonify(success=False,error='تعذّر قراءة تفاصيل المنتج.'),503
+
+@agent_routes.get('/ai/product-preparations/publications')
+def preparation_publications():
+    from product_workflow import publications
+    try:
+        return jsonify(success=True, publications=publications())
+    except Exception:
+        return jsonify(success=False,error='قنوات النشر غير متاحة؛ يلزم read_publications وwrite_publications للنشر. يمكنك تجهيز التعديلات دون نشر.'),503
+
+@agent_routes.post('/ai/product-preparations/copy')
+def preparation_copy():
+    from product_workflow import details, generate_copy, PreparationError
+    try:
+        data=request.get_json(silent=True)
+        if not isinstance(data,dict):
+            raise PreparationError('بيانات غير صحيحة.')
+        return jsonify(success=True, copy=generate_copy(details(data.get('product_id')),data.get('notes','')))
+    except PreparationError as exc:
+        return jsonify(success=False,error=str(exc)),400
+    except Exception:
+        return jsonify(success=False,error='تعذّر تجهيز النصوص؛ لم يتغير المنتج.'),503
+
+@agent_routes.post('/ai/product-preparations/price')
+def preparation_price():
+    from product_workflow import price_review, PreparationError
+    try:
+        data=request.get_json(silent=True)
+        if not isinstance(data,dict):
+            raise PreparationError('بيانات غير صحيحة.')
+        return jsonify(success=True, review=price_review(**{k:data.get(k) for k in ('price','cost','shipping','fee_percent','fixed_fee')}))
+    except PreparationError as exc:
+        return jsonify(success=False,error=str(exc)),400
+
+@agent_routes.route('/ai/product-preparations',methods=['GET','POST'])
+def product_preparations():
+    from product_workflow import list_preparations, save_proposal, PreparationError
+    try:
+        if request.method=='POST':
+            data=request.get_json(silent=True)
+            if not isinstance(data,dict):
+                raise PreparationError('بيانات غير صحيحة.')
+            return jsonify(success=True, **save_proposal(data.get('product_id'),data.get('proposal'))),201
+        return jsonify(success=True, preparations=list_preparations())
+    except PreparationError as exc:
+        return jsonify(success=False,error=str(exc)),400
+    except Exception:
+        return jsonify(success=False,error='تعذّر حفظ أو قراءة تجهيز المنتجات؛ لم يبدأ التنفيذ.'),503
+
+@agent_routes.post('/ai/product-preparations/<int:aid>/<decision>')
+def preparation_decision(aid, decision):
+    from product_workflow import decide, PreparationError
+    try:
+        return jsonify(success=True,state=decide(aid,decision))
+    except PreparationError as exc:
+        return jsonify(success=False,error=str(exc)),409
+    except Exception:
+        return jsonify(success=False,error='راجعي حالة التجهيز وشوبيفاي؛ لا تعيدي التنفيذ قبل التحقق.'),503
+
+@agent_routes.post('/ai/product-preparations/<int:aid>/reconcile')
+def preparation_reconcile(aid):
+    from product_workflow import reconcile, PreparationError
+    try:
+        data=request.get_json(silent=True)
+        return jsonify(success=True,state=reconcile(aid,(data or {}).get('confirmed') if isinstance(data,dict) else False))
+    except PreparationError as exc:
+        return jsonify(success=False,error=str(exc)),409
+    except Exception:
+        return jsonify(success=False,error='تعذّر تسجيل المراجعة.'),503
+
+
+@agent_routes.before_request
+def preparation_request_limit():
+    # A reviewed description plus media IDs can exceed the chat's 16 KiB cap.
+    if request.path.startswith('/ai/product-preparations'):
+        request.max_content_length = 65536

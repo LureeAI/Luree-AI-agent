@@ -149,3 +149,6 @@ can fail if credit/model access is unavailable; the job reports failure rather t
 silently dropping selected audio. Speech up to 22.5 seconds is gently sped up to fit
 within the 15-second cut; longer speech requires a shorter script. Stock images are
 not used and clothing is not reimagined by a video model.
+
+### Three narration languages
+Choose Arabic (`ar`), English (`en`), Korean (`ko`), or all three in the video panel. The all-three option atomically queues three versions using the same photos and visual design, with a separate native-language default script and narration per version. Custom scripts are edited separately in three fields; they are not automatically translated. Three versions require three free queue slots and three available storage slots. Each narration invokes a separate paid TTS request. Existing jobs default to English. Visual text remains the existing English design; this option localizes narration only.

@@ -91,7 +91,11 @@ button:disabled{opacity:.5}
 <label>الفستان <select id="video-product" style="max-width:100%;padding:8px"><option value="">اختاري الفستان…</option></select></label>
 <div id="video-photos" style="display:flex;flex-wrap:wrap;gap:8px;max-height:230px;overflow:auto"></div>
 <label><input id="video-price" type="checkbox" checked> إظهار السعر (من… إذا اختلف بين المقاسات)</label>
-<label><input id="video-voice" type="checkbox" checked> إضافة تعليق صوتي بالذكاء الاصطناعي (يستهلك من رصيد OpenAI)</label><p>النص الافتراضي للتعليق بالإنكليزية؛ يمكنك تعديله بالعربية أو الإنكليزية. الحد: ٤٠ كلمة، ٣٠٠ حرف. الصوت اصطناعي.</p><textarea id="video-narration" maxlength="300" rows="2" aria-label="نص التعليق الصوتي" placeholder="اتركيه فارغًا لاستخدام النص الافتراضي"></textarea>
+<label><input id="video-voice" type="checkbox" checked> إضافة تعليق صوتي بالذكاء الاصطناعي (يستهلك من رصيد OpenAI)</label><p>اختاري لغة واحدة أو ٣ نسخ من نفس الفيديو. لكل نسخة صوت باللغة المختارة، وكل تعليق يستهلك رصيد OpenAI. الصوت اصطناعي. النصوص الافتراضية متاحة باللغات الثلاث؛ يمكنك تعديلها (٤٠ كلمة، ٣٠٠ حرف لكل نص).</p>
+<select id="video-language" aria-label="لغة الفيديو"><option value="all">٣ نسخ: عربي + إنكليزي + كوري</option><option value="ar">عربي</option><option value="en">إنكليزي</option><option value="ko">كوري</option></select>
+<label>النص العربي<textarea id="video-narration-ar" maxlength="300" rows="2" placeholder="اتركيه فارغًا للنص العربي الافتراضي"></textarea></label>
+<label>English<textarea id="video-narration-en" maxlength="300" rows="2" placeholder="Leave empty for the default English script"></textarea></label>
+<label>한국어<textarea id="video-narration-ko" maxlength="300" rows="2" placeholder="기본 한국어 문구를 사용하려면 비워 두세요"></textarea></label>
 <button type="button" id="create-video" disabled>إنشاء فيديو ١٥ ثانية</button>
 <p id="video-status" role="status"></p>
 <div id="video-list" style="max-height:250px;overflow:auto"></div></details>
@@ -409,7 +413,7 @@ async function loadVideos() {
     for(const job of data.videos) {
       const item=document.createElement('div');item.className='bubble agent';
       const text=document.createElement('p');
-      text.textContent=job.title+' — '+(job.include_voice ? 'موسيقى وتعليق صوتي' : 'موسيقى')+' — '+states[job.state]+' — '+new Date(job.created_at).toLocaleString();
+      text.textContent=({'ar':'عربي','en':'إنكليزي','ko':'كوري'}[job.language]||'إنكليزي')+' — '+job.title+' — '+(job.include_voice ? 'موسيقى وتعليق صوتي' : 'موسيقى')+' — '+states[job.state]+' — '+new Date(job.created_at).toLocaleString();
       item.append(text);
       if(job.download_url) {
         const link=document.createElement('a');link.textContent='تنزيل MP4';link.href=job.download_url;
@@ -474,8 +478,8 @@ createVideo.addEventListener('click',async()=>{
   try {
     const ids=[...document.querySelectorAll('#video-photos input:checked')].map(i=>i.value);
     const data=await videoFetch('/ai/videos',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},
-      body:JSON.stringify({product_id:videoProduct.value,image_ids:ids,include_price:document.getElementById('video-price').checked,include_voice:document.getElementById('video-voice').checked,narration:document.getElementById('video-narration').value})});
-    videoStatus.textContent='تم حفظ طلب الفيديو رقم '+data.video_id+'. سيظهر زر التنزيل بعد تجهيز الخدمة له.';
+      body:JSON.stringify({product_id:videoProduct.value,image_ids:ids,include_price:document.getElementById('video-price').checked,include_voice:document.getElementById('video-voice').checked,languages:document.getElementById('video-language').value==='all'?['ar','en','ko']:[document.getElementById('video-language').value],narrations:Object.fromEntries(['ar','en','ko'].map(lang=>[lang,document.getElementById('video-narration-'+lang).value]))})});
+    videoStatus.textContent='تم حفظ طلبات الفيديو: '+(Array.isArray(data.video_id)?data.video_id.join('، '):data.video_id)+'. سيظهر زر التنزيل بعد تجهيز الخدمة له.';
     await loadVideos();
   } catch(error) { videoStatus.textContent=error.message; }
   finally {videoBusy=false;createVideo.disabled=!document.querySelector('#video-photos input:checked');}

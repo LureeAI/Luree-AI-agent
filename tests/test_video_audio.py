@@ -27,6 +27,14 @@ class AudioTests(unittest.TestCase):
             self.assertEqual(client.audio.speech.with_streaming_response.create.call_args.kwargs['model'],'gpt-4o-mini-tts')
             client.close.assert_called_once()
 
+    def test_three_language_instructions(self):
+        for language,name in [('ar','Arabic'),('en','English'),('ko','Korean')]:
+            client=MagicMock()
+            client.audio.speech.with_streaming_response.create.return_value.__enter__.return_value.iter_bytes.return_value=[b'test']
+            with tempfile.TemporaryDirectory() as d,patch.dict(os.environ,{'OPENAI_API_KEY':'test-only'}),patch('openai.OpenAI',return_value=client):
+                make_narration(video_service.DEFAULT_SCRIPTS[language],Path(d)/'voice.wav',language)
+            self.assertIn(name,client.audio.speech.with_streaming_response.create.call_args.kwargs['instructions'])
+
     def test_narration_limits_checked_before_any_api_call(self):
         with patch('openai.OpenAI') as client:
             with self.assertRaises(ValueError):make_narration('x'*301,'/tmp/unused.wav')

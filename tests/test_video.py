@@ -40,6 +40,29 @@ class VideoTests(unittest.TestCase):
         self.assertFalse(snapshot['include_voice'])
         self.assertEqual(snapshot['duration_seconds'],15)
 
+    def test_three_languages_queued_with_native_scripts(self):
+        import json
+        conn=MagicMock()
+        conn.execute.return_value.fetchone.side_effect=[(0,),(0,),(11,),(12,),(13,)]
+        with patch('video_service.product_video_details',return_value=PRODUCT),patch('video_service._connect') as db,patch.dict(os.environ,{'OPENAI_API_KEY':'test-only'}):
+            db.return_value.__enter__.return_value=conn
+            ids=videos.create_video_job(PRODUCT['id'],[PRODUCT['images']['nodes'][0]['id']],True,True,languages=['ar','en','ko'])
+        self.assertEqual(ids,[11,12,13])
+        snapshots=[json.loads(c.args[1][2]) for c in conn.execute.call_args_list if 'INSERT INTO agent_videos(' in c.args[0]]
+        self.assertEqual([s['language'] for s in snapshots],['ar','en','ko'])
+        for s in snapshots:
+            self.assertEqual(s['narration'],videos.DEFAULT_SCRIPTS[s['language']])
+            self.assertEqual(s['images'],snapshots[0]['images'])
+
+    def test_batch_quota_rejects_before_any_insert(self):
+        conn=MagicMock()
+        conn.execute.return_value.fetchone.side_effect=[(8,),(0,)]
+        with patch('video_service.product_video_details',return_value=PRODUCT),patch('video_service._connect') as db,patch.dict(os.environ,{'OPENAI_API_KEY':'test-only'}):
+            db.return_value.__enter__.return_value=conn
+            with self.assertRaises(videos.VideoError):
+                videos.create_video_job(PRODUCT['id'],[PRODUCT['images']['nodes'][0]['id']],True,True,languages=['ar','en','ko'])
+        self.assertFalse(any('INSERT INTO' in c.args[0] for c in conn.execute.call_args_list))
+
     def test_quota_prevents_unbounded_video_storage(self):
         conn=MagicMock()
         conn.execute.return_value.fetchone.side_effect=[(10,),(0,)]

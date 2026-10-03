@@ -33,7 +33,10 @@ def make_music(path):
         output.writeframes(buffer)
     return Path(path)
 
-def make_narration(script,path):
+def make_narration(script,path,language='en'):
+    names={'ar':'Arabic','en':'English','ko':'Korean'}
+    if language not in names:
+        raise ValueError('Unsupported narration language')
     if not isinstance(script,str) or not script.strip() or len(script)>300:
         raise ValueError('Narration must be 1–300 characters')
     key=os.environ.get('OPENAI_API_KEY','').strip()
@@ -45,7 +48,7 @@ def make_narration(script,path):
     try:
         with client.audio.speech.with_streaming_response.create(
             model='gpt-4o-mini-tts',voice='nova',input=script,
-            instructions='Read this short fashion advertisement clearly and warmly. Keep a natural, confident pace. Do not add words.',
+            instructions=f'Speak only in {names[language]}. Read this short fashion advertisement clearly and warmly. Keep a natural, confident pace. Do not add words.',
             response_format='wav') as response:
             size=0
             with open(path,'wb') as output:

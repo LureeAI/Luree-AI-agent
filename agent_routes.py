@@ -110,7 +110,7 @@ def video_jobs():
             data=request.get_json(silent=True)
             if not isinstance(data,dict):
                 return jsonify(success=False,error='بيانات الفيديو غير صحيحة.'),400
-            aid=create_video_job(data.get('product_id'),data.get('image_ids'),data.get('include_price',True),data.get('include_voice',False),data.get('narration',''))
+            aid=create_video_job(data.get('product_id'),data.get('image_ids'),data.get('include_price',True),data.get('include_voice',False),data.get('narration',''),data.get('language','en'),data.get('languages'),data.get('narrations'))
             return jsonify(success=True,video_id=aid,state='queued'),202
         return jsonify(success=True,videos=list_videos())
     except VideoError as exc:

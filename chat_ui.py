@@ -17,7 +17,7 @@ body{margin:0;background:#10121a;color:#eee;
 font-family:Arial,sans-serif}
 main{max-width:760px;margin:auto;height:100dvh;
 display:flex;flex-direction:column;padding:18px}
-header{padding:12px 0;border-bottom:1px solid #333}
+header{padding:12px 0;border-bottom:1px solid #333;max-height:55dvh;overflow:auto;flex-shrink:0}
 h1{font-size:24px;margin:0;color:#eac884}
 header p{color:#aaa;font-size:14px}
 #messages{flex:1;overflow:auto;padding:18px 0}
@@ -83,6 +83,9 @@ button:disabled{opacity:.5}
 <div class="controls"><button id="mic" type="button">🎤 إملاء رسالة</button><button id="voice" type="button" aria-pressed="false">الصوت: متوقف</button><button id="replay" type="button" disabled>قراءة آخر رد</button><button id="stop" type="button">إيقاف الصوت</button></div>
 <div class="controls"><button id="logout" type="button">تسجيل خروج</button></div>
 <details><summary>تعليماتي المحفوظة</summary><p>اكتبي قواعد المتجر وتفضيلاتك ليستخدمها الوكيل في كل محادثة.</p><textarea id="preferences" maxlength="4000" rows="3" aria-label="تعليمات محفوظة"></textarea><button id="save-memory" type="button">حفظ التعليمات</button></details>
+<details><summary>تنبيهات المخزون</summary><p id="inventory-status"></p><p>الحد: ٥٠ قطعة من مجموع مخزون المنتج. روابط الموردين للبحث فقط.</p><div id="inventory-alerts" style="max-height:200px;overflow:auto"></div></details>
+<details><summary>الإعلانات: TikTok وFacebook وInstagram</summary><p id="marketing-status">جاري تحميل حالة الربط…</p><button type="button" id="marketing-report">قراءة نتائج آخر ٧ أيام</button><button type="button" id="marketing-plan">تحليل الإعلانات وتحضير خطة</button><div id="marketing-results" style="max-height:200px;overflow:auto"></div></details>
+<details><summary>إجراءات تنتظر موافقتي</summary><p>راجعي التغيير قبل الموافقة. هذه النسخة تدعم عنوان ووصف المنتج وإيقاف حملة Meta.</p><div id="actions" style="max-height:200px;overflow:auto"></div></details>
 </header>
 <section id="messages" aria-live="polite">
 <div class="bubble agent">أهلًا غصون، شو بتحبي نحلّل بمتجرك اليوم؟</div>
@@ -199,6 +202,7 @@ document.getElementById('form').addEventListener('submit', async (event) => {
     }
     lastAnswer = data.answer || '';
     add(lastAnswer || 'لم يصل نص الرد.', 'agent');
+    loadActions();
     replay.disabled = !lastAnswer || !synth;
     if (voiceEnabled && lastAnswer) speak(lastAnswer);
   } catch (error) {
@@ -239,6 +243,139 @@ document.getElementById('logout').addEventListener('click', async () => {
   await fetch('/logout', {method:'POST',headers:{'X-CSRF-Token':csrf}});
   window.location.href = '/login';
 });
+
+async function loadInventoryAlerts() {
+  const notice = document.getElementById('inventory-status');
+  try {
+    const response = await fetch('/ai/inventory/alerts');
+    if (response.status === 401) { window.location.href = '/login'; return; }
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    const checked = data.checked_at ? new Date(data.checked_at) : null;
+    notice.textContent = !checked ? 'المراقبة بانتظار تشغيل خدمة المخزون.' :
+      (Date.now() - checked.getTime() > 1800000 ? 'المراقبة متأخرة؛ آخر فحص: ' : 'آخر فحص: ') + checked.toLocaleString();
+    const list = document.getElementById('inventory-alerts');
+    list.replaceChildren();
+    if (!data.alerts.length) {
+      const empty = document.createElement('p');
+      empty.textContent = checked ? 'لا توجد تنبيهات محفوظة.' : 'سيظهر التنبيه هنا بعد أول فحص.';
+      list.append(empty);
+    }
+    for (const alert of data.alerts) {
+      const item = document.createElement('div');
+      item.className = 'bubble agent';
+      const title = document.createElement('p');
+      title.textContent = alert.title + ' — المخزون وقت التنبيه: ' + alert.quantity +
+        ' — ' + new Date(alert.created_at).toLocaleString();
+      item.append(title);
+      const link = document.createElement('a');
+      link.textContent = 'البحث عن مورد على AliExpress';
+      link.href = alert.supplier_search_url;
+      link.target = '_blank'; link.rel = 'noopener noreferrer'; link.style.color = '#eac884';
+      item.append(link);
+      if (!alert.acknowledged) {
+        const button = document.createElement('button');
+        button.textContent = 'تم الاطلاع'; button.type = 'button';
+        button.addEventListener('click', async () => {
+          button.disabled = true;
+          try {
+            const r = await fetch('/ai/inventory/alerts/' + alert.id + '/acknowledge', {
+              method:'POST', headers:{'X-CSRF-Token':csrf}});
+            if (!r.ok) throw new Error();
+            await loadInventoryAlerts();
+          } catch { notice.textContent = 'تعذّر حفظ حالة التنبيه.'; button.disabled = false; }
+        });
+        item.append(button);
+      }
+      list.append(item);
+    }
+  } catch { notice.textContent = 'تعذّر تحميل التنبيهات. ستتم إعادة المحاولة.'; }
+}
+
+async function loadMarketingStatus() {
+  try {
+    const response = await fetch('/ai/marketing/status');
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    document.getElementById('marketing-status').textContent = Object.entries(data.platforms).map(([name,p]) =>
+      (name === 'meta' ? 'Facebook وInstagram' : 'TikTok') + ': ' +
+      (p.configured ? 'البيانات مُعدّة، التحقق عند قراءة التقرير' : 'بانتظار إعداد الربط')).join(' — ');
+  } catch { document.getElementById('marketing-status').textContent = 'تعذّر قراءة حالة الربط.'; }
+}
+document.getElementById('marketing-report').addEventListener('click', async (event) => {
+  const button = event.currentTarget;
+  const output = document.getElementById('marketing-results');
+  button.disabled = true; output.textContent = 'جاري قراءة التقارير…';
+  try {
+    const response = await fetch('/ai/marketing/report');
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    output.replaceChildren();
+    for (const [platform,report] of Object.entries(data.reports)) {
+      const text = document.createElement('p');
+      if (!report.verified) {
+        text.textContent = platform + ': ' + (report.error || 'بانتظار الربط');
+        output.append(text); continue;
+      }
+      text.textContent = platform + ' — ' + report.start_date + ' إلى ' + report.end_date;
+      output.append(text);
+      if (!report.rows.length) {
+        const empty = document.createElement('p'); empty.textContent = 'لا توجد نتائج في هذه المدة.'; output.append(empty);
+      }
+      for (const row of report.rows) {
+        const line = document.createElement('p');
+        line.textContent = (row.campaign_name || row.campaign_id) + ' (' + row.placement + ')' +
+          ' — الإنفاق: ' + (row.spend ?? 'غير متاح') + ' ' + (row.currency || '(العملة تحتاج تأكيد)') +
+          ' — الظهور: ' + (row.impressions ?? 'غير متاح') + ' — النقرات: ' + (row.clicks ?? 'غير متاح');
+        output.append(line);
+      }
+    }
+  } catch { output.textContent = 'تعذّر تحميل التقرير.'; }
+  finally { button.disabled = false; }
+});
+document.getElementById('marketing-plan').addEventListener('click', () => {
+  input.value = 'حلّل بيانات الإعلانات المتاحة على TikTok وFacebook وInstagram مع بيانات المتجر. اذكر الحسابات غير المتصلة، واقترح خطة إعلانات عملية ونصوصًا للمنتجات المتوفرة. ميّز بين النقرات والتحويلات والمشتريات المؤكدة، ولا تفترض ميزانية أو تشغّل إعلانًا.';
+  input.focus();
+});
+async function loadActions() {
+  const list = document.getElementById('actions');
+  try {
+    const response = await fetch('/ai/actions');
+    if (!response.ok) throw new Error();
+    const data = await response.json();
+    list.replaceChildren();
+    if (!data.actions.length) list.textContent = 'لا توجد إجراءات محفوظة.';
+    for (const action of data.actions) {
+      const item = document.createElement('div'); item.className = 'bubble agent';
+      const text = document.createElement('p');
+      const old = action.kind === 'product_title' ? action.before.title : action.kind === 'product_description' ? action.before.descriptionHtml : action.before.status;
+      const states = {pending:'بانتظار الموافقة',completed:'تم التنفيذ',rejected:'مرفوض',failed:'فشل التنفيذ',expired:'انتهت صلاحية الاقتراح',needs_review:'راجعي المنصة؛ نتيجة التنفيذ غير مؤكدة'};
+      text.textContent = action.kind + ' — ' + action.target + '\nالسبب: ' + action.reason + '\nقبل: ' + old + '\nبعد: ' + action.content + '\nالحالة: ' + (states[action.state] || action.state);
+      item.append(text);
+      if (action.state === 'pending') {
+        for (const [decision,label] of [['approve','موافقة وتنفيذ'],['reject','رفض']]) {
+          const button = document.createElement('button'); button.type='button'; button.textContent=label;
+          button.addEventListener('click', async () => {
+            button.disabled=true;
+            try {
+              const r=await fetch('/ai/actions/'+action.id+'/'+decision,{method:'POST',headers:{'X-CSRF-Token':csrf}});
+              const result=await r.json();
+              if(!r.ok) throw new Error(result.error || 'تعذّر حفظ القرار.');
+              await loadActions();
+            } catch(error) { status.textContent=error.message; await loadActions(); }
+          });
+          item.append(button);
+        }
+      }
+      list.append(item);
+    }
+  } catch { list.textContent = 'تعذّر تحميل الإجراءات.'; }
+}
+loadActions();
+loadMarketingStatus();
+loadInventoryAlerts();
+const inventoryTimer = setInterval(loadInventoryAlerts, 60000);
+window.addEventListener('pagehide', () => clearInterval(inventoryTimer));
 loadMemory();
 </script>
 </body>

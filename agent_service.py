@@ -17,6 +17,11 @@ def run_agent(message):
         history = load_messages(20)
         preferences = get_preferences()
         store_context = build_store_context()
+        if any(word in message.lower() for word in ('إعلان', 'اعلان', 'تسويق', 'تيك', 'فيسبوك', 'انست', 'instagram', 'facebook', 'tiktok', 'campaign', 'marketing', 'ads')):
+            from ads_service import get_ads_context
+            store_context += '\nAD REPORTS (read-only, attribution differs by platform):\n' + json.dumps(get_ads_context(), ensure_ascii=False)
+        if len(store_context)>250000:
+            raise RuntimeError('Store and ad context requires narrower analysis')
         answer = ask_llm(message, store_context, history, preferences)
         if not answer or not answer.strip():
             raise RuntimeError('Empty model response')

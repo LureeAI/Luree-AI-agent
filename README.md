@@ -27,3 +27,76 @@ No new paid services are introduced. More store data and recent conversation con
 Start: `gunicorn app:app --bind 0.0.0.0:8080 --timeout 240`
 
 Verify: `python -m unittest discover -s tests -v`
+
+## Automatic inventory monitoring
+
+Deploy a second always-on service from the same repository with start command
+`python inventory_worker.py`. Give it the same DATABASE_URL and SHOPIFY_STORE_DOMAIN.
+The stored Shopify OAuth token is read from PostgreSQL. No OpenAI calls or new provider
+subscriptions are used by this worker; a second Railway service uses Railway resources.
+
+The worker retries every minute and performs a complete product read at most once every
+15 minutes. PostgreSQL locking and an atomic transaction prevent duplicated alerts from
+concurrent workers and partial scans. Keep the worker running even when the web UI is closed.
+Existing web service start command is unchanged. This worker is portable to a standard
+container/process on Google Cloud with the same environment and database.
+
+Active products with totalInventory <= 50 create an initial alert. Subsequent alerts occur
+only when entering low stock, entering out-of-stock, or recovering above 50 and dropping
+again. Non-active and unknown-inventory products are ignored. This is product aggregate
+inventory, not size/color variant monitoring. Acknowledgement does not reset the threshold.
+Historical alerts retain the quantity at detection; they are not current stock reports.
+
+Private interface: expand "تنبيهات المخزون". The last successful scan time and stale-worker
+notice are shown, with the last 100 persisted alerts and per-alert acknowledgement.
+Alerts are in-app only; no email/WhatsApp/push delivery is configured. AliExpress links
+are search shortcuts, not verified supplier recommendations or automatic supplier research.
+Do not confuse preserved owner instructions with an enabled monitor.
+
+
+## Advertising reports and planning
+
+Shopify social channels and this agent's API access are separate connections.
+Connect Facebook and Instagram by Meta and TikTok channels in Shopify for catalog/pixel
+setup. These channels do not give the agent advertising account API tokens.
+
+For read-only Meta reports, set META_ACCESS_TOKEN with ads_read account access,
+META_AD_ACCOUNT_ID and META_API_VERSION (explicit supported version, e.g. v25.0).
+For TikTok reports, obtain authorized TikTok API for Business access and set
+TIKTOK_ACCESS_TOKEN and TIKTOK_ADVERTISER_ID. Enter tokens only in host environment
+secrets. Token issuance, app review and account permissions remain account-side tasks.
+The UI reports configuration separately from a successfully verified API report.
+
+Private endpoints: /ai/marketing/status and /ai/marketing/report?start=YYYY-MM-DD&end=YYYY-MM-DD.
+Default: last seven completed dates using Seoul to select dates; providers interpret
+report dates in their ad account timezone. Meta results split publisher_platform.
+TikTok report currency remains unknown until confirmed from the account.
+The agent includes available reports for marketing-related messages and can prepare
+plans/copy. Unconnected accounts are disclosed, never represented by invented metrics.
+Missing metrics are null, not zero. Platform-attributed conversions are not confirmed
+Shopify orders; do not aggregate overlapping Meta actions or different currencies.
+
+This version does not create/launch ads, publish social posts, change product prices,
+or spend money. Those writes need separate adapters plus explicit campaign budget,
+audience and creative approval. Supplier links remain search shortcuts.
+
+API references:
+- https://developers.facebook.com/docs/marketing-api/insights/
+- https://developers.facebook.com/docs/marketing-api/insights/breakdowns/
+- https://github.com/tiktok/tiktok-business-api-sdk/blob/main/python_sdk/docs/ReportingApi.md
+- https://help.shopify.com/en/manual/online-sales-channels/social-commerce/facebook-instagram-by-meta/setup
+
+## Reviewed execution
+
+The model can save concrete proposals using a function tool. It cannot execute them.
+Supported actions: product title, plain-text product description, and Meta campaign pause.
+The owner sees target, before/after and reason in the private UI and approves/rejects.
+Shopify writes require write_products. Meta pause requires ads_management; ads_read
+only allows reporting. Full store administration and campaign creation are not yet implemented.
+
+Proposals expire after 24 hours. Execution checks that the product/campaign snapshot
+has not changed, locks the stored action, preserves product handles, escapes description
+HTML and refuses already-decided actions. Transport uncertainty becomes needs_review
+and is never automatically retried. Check the provider before creating a replacement.
+All action and report endpoints retain the existing owner session and write CSRF protection.
+No provider credentials or raw errors are returned to the model/UI.

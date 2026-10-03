@@ -65,7 +65,12 @@ def mux_audio(silent_video,music,narration,output):
     args=[imageio_ffmpeg.get_ffmpeg_exe(),'-hide_banner','-loglevel','error','-y','-i',str(silent_video),'-i',str(music)]
     if narration:
         with wave.open(str(narration),'rb') as source:
-            duration=source.getnframes()/source.getframerate()
+            # Streaming WAV headers may advertise an unknown (0xffffffff) size.
+            # Measure actual bounded PCM bytes, not the header's frame count.
+            rate=source.getframerate()
+            frame_bytes=source.getnchannels()*source.getsampwidth()
+            samples=source.readframes(int(rate*23))
+            duration=len(samples)/(frame_bytes*rate)
         if duration<=0 or duration>22.5:
             raise ValueError('Narration is too long; shorten the script')
         pace=max(1,duration/14.0)

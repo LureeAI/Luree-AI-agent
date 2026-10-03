@@ -3,3 +3,6 @@ gunicorn==23.0.0
 requests==2.32.5
 openai
 psycopg[binary]
+
+Pillow>=11.0,<13
+imageio-ffmpeg>=0.6,<0.7

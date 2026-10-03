@@ -3,6 +3,7 @@ import logging
 from llm_service import ask_llm
 from shopify_service import get_store_context
 from database import load_messages, get_preferences, save_exchange
+from conversation_recall import recall_messages, recall_context
 
 
 def build_store_context():
@@ -16,7 +17,8 @@ def run_agent(message):
     try:
         history = load_messages(20)
         preferences = get_preferences()
-        store_context = build_store_context()
+        older = recall_messages(message, history[0].get('id') if history else None)
+        store_context = build_store_context() + recall_context(older)
         if any(word in message.lower() for word in ('إعلان', 'اعلان', 'تسويق', 'تيك', 'فيسبوك', 'انست', 'instagram', 'facebook', 'tiktok', 'campaign', 'marketing', 'ads')):
             from ads_service import get_ads_context
             store_context += '\nAD REPORTS (read-only, attribution differs by platform):\n' + json.dumps(get_ads_context(), ensure_ascii=False)

@@ -58,6 +58,7 @@ def _prepare_memory(conn):
         id BIGSERIAL PRIMARY KEY, shop TEXT NOT NULL, role TEXT NOT NULL,
         content TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())''')
     conn.execute('CREATE INDEX IF NOT EXISTS agent_messages_shop_id ON agent_messages(shop, id)')
+    conn.execute("CREATE INDEX IF NOT EXISTS agent_messages_search ON agent_messages USING GIN (to_tsvector('simple',content))")
     conn.execute('''CREATE TABLE IF NOT EXISTS agent_preferences (
         shop TEXT PRIMARY KEY, instructions TEXT NOT NULL DEFAULT '')''')
 
@@ -115,3 +116,4 @@ def clear_login_failures():
     with _connect() as conn:
         _prepare_login(conn)
         conn.execute('DELETE FROM agent_login_failures')
+

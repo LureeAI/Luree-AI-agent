@@ -91,6 +91,14 @@ button:disabled{opacity:.5}
 <details><summary>الإعلانات: TikTok وFacebook وInstagram</summary><p id="marketing-status">جاري تحميل حالة الربط…</p><button type="button" id="marketing-report">قراءة نتائج آخر ٧ أيام</button><button type="button" id="marketing-plan">تحليل الإعلانات وتحضير خطة</button><div id="marketing-results" style="max-height:200px;overflow:auto"></div></details>
 <details><summary>إجراءات تنتظر موافقتي</summary><p>راجعي التغيير قبل الموافقة. هذه النسخة تدعم عنوان ووصف المنتج وإيقاف حملة Meta.</p><div id="actions" style="max-height:200px;overflow:auto"></div></details>
 <details id="product-preparer"><summary>تجهيز فستان ومناقشة سعره</summary>
+<details id="prep-import-list"><summary>Import List — قائمة الاستيراد</summary>
+<p>هذا القسم مخصص للفساتين الموجودة في قائمة الاستيراد في DSers قبل نقلها إلى Shopify.</p>
+<p role="status">قائمة DSers غير متصلة بالوكيل حاليًا؛ لا يمكن عرض فساتينها أو تعديلها هنا بعد.</p>
+<a href="https://www.dsers.com/application/import_list" target="_blank" rel="noopener noreferrer">فتح Import List في DSers</a>
+<p>للعمل الآن: انقلي الفستان من DSers إلى Shopify كمسودة مع ربط المورّد، ثم اختاريه من My Products أدناه. مسودة Shopify ليست قائمة DSers.</p>
+</details>
+<details id="prep-my-products" open><summary>My Products — منتجاتي في Shopify</summary>
+<p>منتجات Shopify الحالية، بما فيها المسودات والمنشورة. هذه القائمة تُقرأ من Shopify وليست مزامنة لقائمة My Products في DSers.</p>
 <p>استوردي الفستان عبر DSers إلى Shopify كمسودة أولًا، مع ربط المورّد. هنا نجهّز النصوص والسعر وترتيب الصور دون تغيير الألوان والمقاسات أو معرّفاتها. التحقق المباشر من مخزون المورّد غير متاح بعد.</p>
 <label>الفستان <select id="prep-product"><option value="">اختاري الفستان…</option></select></label>
 <p id="prep-stock"></p>
@@ -120,6 +128,7 @@ button:disabled{opacity:.5}
 <p>السعر المدخل سيطبّق على كل الخيارات، وسيُزال سعر المقارنة القديم لتجنب عرض خصم غير صحيح. إذا المنتج منشور حاليًا، التعديلات ستظهر عليه عند التنفيذ. اختيار النشر يفعّل المنتج وقد يجعله ظاهرًا أيضًا في القنوات المرتبط بها سابقًا.</p>
 <button id="prep-save" type="button">حفظ معاينة للموافقة</button><p id="prep-status" role="status"></p>
 <div id="prep-list"></div>
+</details>
 </details>
 
 <details id="video-builder"><summary>إنشاء فيديو فستان</summary>

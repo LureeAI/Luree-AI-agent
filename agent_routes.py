@@ -91,3 +91,53 @@ def decide(action_id, decision):
         return jsonify(success=False, error=str(exc)), 409
     except Exception:
         return jsonify(success=False, error='تعذّر حفظ القرار؛ راجعي حالة الإجراء قبل المحاولة.'), 503
+
+@agent_routes.get('/ai/videos/product')
+def video_product():
+    from video_service import product_video_details, VideoError
+    try:
+        return jsonify(success=True, product=product_video_details(request.args.get('id','')))
+    except VideoError as exc:
+        return jsonify(success=False,error=str(exc)),400
+    except Exception:
+        return jsonify(success=False,error='تعذّر قراءة صور الفستان.'),503
+
+@agent_routes.route('/ai/videos',methods=['GET','POST'])
+def video_jobs():
+    from video_service import create_video_job, list_videos, VideoError
+    try:
+        if request.method=='POST':
+            data=request.get_json(silent=True)
+            if not isinstance(data,dict):
+                return jsonify(success=False,error='بيانات الفيديو غير صحيحة.'),400
+            aid=create_video_job(data.get('product_id'),data.get('image_ids'),data.get('include_price',True),data.get('include_voice',False),data.get('narration',''),data.get('language','en'),data.get('languages'),data.get('narrations'))
+            return jsonify(success=True,video_id=aid,state='queued'),202
+        return jsonify(success=True,videos=list_videos())
+    except VideoError as exc:
+        return jsonify(success=False,error=str(exc)),400
+    except Exception:
+        return jsonify(success=False,error='تعذّر الوصول إلى خدمة الفيديو.'),503
+
+@agent_routes.get('/ai/videos/<int:video_id>/file')
+def video_file(video_id):
+    import io
+    from flask import send_file
+    from video_service import get_video
+    try:
+        video=get_video(video_id)
+        if video is None:
+            return jsonify(success=False,error='الفيديو غير جاهز أو غير موجود.'),404
+        return send_file(io.BytesIO(video),mimetype='video/mp4',as_attachment=True,
+            download_name=f'luree-dress-{video_id}-15s.mp4',conditional=True)
+    except Exception:
+        return jsonify(success=False,error='تعذّر تنزيل الفيديو.'),503
+
+@agent_routes.delete('/ai/videos/<int:video_id>')
+def remove_video(video_id):
+    from video_service import delete_video
+    try:
+        if not delete_video(video_id):
+            return jsonify(success=False,error='الفيديو قيد التجهيز أو غير موجود.'),409
+        return jsonify(success=True)
+    except Exception:
+        return jsonify(success=False,error='تعذّر حذف الفيديو.'),503

@@ -86,6 +86,20 @@ button:disabled{opacity:.5}
 <details><summary>تنبيهات المخزون</summary><p id="inventory-status"></p><p>الحد: ٥٠ قطعة من مجموع مخزون المنتج. روابط الموردين للبحث فقط.</p><div id="inventory-alerts" style="max-height:200px;overflow:auto"></div></details>
 <details><summary>الإعلانات: TikTok وFacebook وInstagram</summary><p id="marketing-status">جاري تحميل حالة الربط…</p><button type="button" id="marketing-report">قراءة نتائج آخر ٧ أيام</button><button type="button" id="marketing-plan">تحليل الإعلانات وتحضير خطة</button><div id="marketing-results" style="max-height:200px;overflow:auto"></div></details>
 <details><summary>إجراءات تنتظر موافقتي</summary><p>راجعي التغيير قبل الموافقة. هذه النسخة تدعم عنوان ووصف المنتج وإيقاف حملة Meta.</p><div id="actions" style="max-height:200px;overflow:auto"></div></details>
+<details id="video-builder"><summary>إنشاء فيديو فستان</summary>
+<p>فيديو عمودي ١٥ ثانية: افتتاحية، صور المنتج بحركة وانتقالات، موسيقى أصلية، السعر، ودعوة للشراء. اختاري صور اللون المطلوب.</p>
+<label>الفستان <select id="video-product" style="max-width:100%;padding:8px"><option value="">اختاري الفستان…</option></select></label>
+<div id="video-photos" style="display:flex;flex-wrap:wrap;gap:8px;max-height:230px;overflow:auto"></div>
+<label><input id="video-price" type="checkbox" checked> إظهار السعر (من… إذا اختلف بين المقاسات)</label>
+<label><input id="video-voice" type="checkbox" checked> إضافة تعليق صوتي بالذكاء الاصطناعي (يستهلك من رصيد OpenAI)</label><p>اختاري لغة واحدة أو ٣ نسخ من نفس الفيديو. لكل نسخة صوت باللغة المختارة، وكل تعليق يستهلك رصيد OpenAI. الصوت اصطناعي. النصوص الافتراضية متاحة باللغات الثلاث؛ يمكنك تعديلها (٤٠ كلمة، ٣٠٠ حرف لكل نص).</p>
+<select id="video-language" aria-label="لغة الفيديو"><option value="all">٣ نسخ: عربي + إنكليزي + كوري</option><option value="ar">عربي</option><option value="en">إنكليزي</option><option value="ko">كوري</option></select>
+<label>النص العربي<textarea id="video-narration-ar" maxlength="300" rows="2" placeholder="اتركيه فارغًا للنص العربي الافتراضي"></textarea></label>
+<label>English<textarea id="video-narration-en" maxlength="300" rows="2" placeholder="Leave empty for the default English script"></textarea></label>
+<label>한국어<textarea id="video-narration-ko" maxlength="300" rows="2" placeholder="기본 한국어 문구를 사용하려면 비워 두세요"></textarea></label>
+<button type="button" id="create-video" disabled>إنشاء فيديو ١٥ ثانية</button>
+<p id="video-status" role="status"></p>
+<div id="video-list" style="max-height:250px;overflow:auto"></div></details>
+
 </header>
 <section id="messages" aria-live="polite">
 <div class="bubble agent">أهلًا غصون، شو بتحبي نحلّل بمتجرك اليوم؟</div>
@@ -377,6 +391,102 @@ loadInventoryAlerts();
 const inventoryTimer = setInterval(loadInventoryAlerts, 60000);
 window.addEventListener('pagehide', () => clearInterval(inventoryTimer));
 loadMemory();
+
+const videoBuilder=document.getElementById('video-builder');
+const videoProduct=document.getElementById('video-product');
+const createVideo=document.getElementById('create-video');
+const videoStatus=document.getElementById('video-status');
+let videosInitialized=false, videoBusy=false, videoSelectionVersion=0;
+async function videoFetch(path,options={}) {
+  const response=await fetch(path,options);
+  if(response.status===401) { window.location.href='/login'; throw new Error('يلزم الدخول.'); }
+  const data=await response.json();
+  if(!response.ok || !data.success) throw new Error(data.error || 'تعذّر الوصول لخدمة الفيديو.');
+  return data;
+}
+async function loadVideos() {
+  if(!videoBuilder.open) return;
+  try {
+    const data=await videoFetch('/ai/videos');
+    const list=document.getElementById('video-list');list.replaceChildren();
+    const states={queued:'بانتظار خدمة التجهيز',rendering:'الفيديو عم يتجهّز',ready:'جاهز للتنزيل',failed:'تعذّر التجهيز؛ اختاري صورًا أخرى أو راجعي خدمة التجهيز'};
+    for(const job of data.videos) {
+      const item=document.createElement('div');item.className='bubble agent';
+      const text=document.createElement('p');
+      text.textContent=({'ar':'عربي','en':'إنكليزي','ko':'كوري'}[job.language]||'إنكليزي')+' — '+job.title+' — '+(job.include_voice ? 'موسيقى وتعليق صوتي' : 'موسيقى')+' — '+states[job.state]+' — '+new Date(job.created_at).toLocaleString();
+      item.append(text);
+      if(job.download_url) {
+        const link=document.createElement('a');link.textContent='تنزيل MP4';link.href=job.download_url;
+        link.style.color='#eac884';link.setAttribute('download','');item.append(link);
+      }
+      if(job.state!=='rendering') {
+        const button=document.createElement('button');button.type='button';button.textContent='حذف';
+        button.addEventListener('click',async()=>{
+          if(!window.confirm('حذف هذا الفيديو أو الطلب؟')) return;
+          button.disabled=true;
+          try { await videoFetch('/ai/videos/'+job.id,{method:'DELETE',headers:{'X-CSRF-Token':csrf}});await loadVideos(); }
+          catch(error) { videoStatus.textContent=error.message;button.disabled=false; }
+        });
+        item.append(button);
+      }
+      list.append(item);
+    }
+  } catch(error) { videoStatus.textContent=error.message; }
+}
+videoBuilder.addEventListener('toggle',async()=>{
+  if(!videoBuilder.open) return;
+  loadVideos();
+  if(videosInitialized) return;
+  try {
+    const data=await videoFetch('/products');
+    for(const product of data.products.filter(p=>p.status==='ACTIVE')) {
+      const option=document.createElement('option');option.value=product.id;option.textContent=product.title;
+      videoProduct.append(option);
+    }
+    videosInitialized=true;
+  } catch(error) { videoStatus.textContent=error.message; }
+});
+videoProduct.addEventListener('change',async()=>{
+  const version=++videoSelectionVersion;
+  const photos=document.getElementById('video-photos');photos.replaceChildren();
+  createVideo.disabled=true;
+  if(!videoProduct.value) return;
+  videoStatus.textContent='جاري تحميل صور الفستان…';
+  try {
+    const data=await videoFetch('/ai/videos/product?id='+encodeURIComponent(videoProduct.value));
+    if(version!==videoSelectionVersion) return;
+    for(const [index,image] of data.product.images.nodes.entries()) {
+      const label=document.createElement('label');label.style.width='110px';
+      const picture=document.createElement('img');picture.src=image.url;picture.alt=image.altText || 'صورة الفستان '+(index+1);
+      picture.width=100;picture.height=120;picture.style.objectFit='contain';
+      const check=document.createElement('input');check.type='checkbox';check.value=image.id;
+      check.checked=index<3;
+      check.addEventListener('change',()=>{
+        const count=photos.querySelectorAll('input:checked').length;
+        if(count>5) {check.checked=false;videoStatus.textContent='اختاري خمس صور كحد أقصى.';}
+        createVideo.disabled=videoBusy || !photos.querySelector('input:checked');
+      });
+      label.append(picture,check,document.createTextNode('اختيار'));photos.append(label);
+    }
+    createVideo.disabled=!photos.querySelector('input:checked') || videoBusy;
+    videoStatus.textContent=data.product.images.nodes.length ? 'اختاري من صورة واحدة إلى خمس صور؛ حافظي على نفس اللون إذا بدك فيديو للون واحد.' : 'هذا المنتج لا يحتوي صورًا.';
+  } catch(error) { if(version===videoSelectionVersion) videoStatus.textContent=error.message; }
+});
+createVideo.addEventListener('click',async()=>{
+  if(videoBusy) return;
+  videoBusy=true;createVideo.disabled=true;
+  try {
+    const ids=[...document.querySelectorAll('#video-photos input:checked')].map(i=>i.value);
+    const data=await videoFetch('/ai/videos',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},
+      body:JSON.stringify({product_id:videoProduct.value,image_ids:ids,include_price:document.getElementById('video-price').checked,include_voice:document.getElementById('video-voice').checked,languages:document.getElementById('video-language').value==='all'?['ar','en','ko']:[document.getElementById('video-language').value],narrations:Object.fromEntries(['ar','en','ko'].map(lang=>[lang,document.getElementById('video-narration-'+lang).value]))})});
+    videoStatus.textContent='تم حفظ طلبات الفيديو: '+(Array.isArray(data.video_id)?data.video_id.join('، '):data.video_id)+'. سيظهر زر التنزيل بعد تجهيز الخدمة له.';
+    await loadVideos();
+  } catch(error) { videoStatus.textContent=error.message; }
+  finally {videoBusy=false;createVideo.disabled=!document.querySelector('#video-photos input:checked');}
+});
+const videoTimer=setInterval(loadVideos,5000);
+window.addEventListener('pagehide',()=>clearInterval(videoTimer));
+
 </script>
 </body>
 </html>
@@ -386,4 +496,3 @@ loadMemory();
 @chat_ui.route("/assistant", methods=["GET"])
 def assistant_page():
     return Response(PAGE.replace("{{ csrf_token() }}", csrf_token()), mimetype="text/html")
-

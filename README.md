@@ -100,3 +100,55 @@ HTML and refuses already-decided actions. Transport uncertainty becomes needs_re
 and is never automatically retried. Check the provider before creating a replacement.
 All action and report endpoints retain the existing owner session and write CSRF protection.
 No provider credentials or raw errors are returned to the model/UI.
+
+## Dress video builder
+
+The private assistant includes an Arabic "إنشاء فيديو فستان" panel. Select an active
+Shopify product, choose 1–5 photos (up to the first 30 product images shown), choose
+whether to show the price, and queue a 15-second 720×1280, 24fps MP4 with a hook, product showcase, price and CTA.
+Images are contain-fitted to preserve the garment, with gentle zoom/crossfades.
+English product titles and price overlays use actual product data at request time;
+non-Latin titles fall back to a generic English headline. If variant prices differ,
+the minimum is explicitly labeled From. An original synthesized instrumental is included.
+The optional AI voiceover uses OpenAI gpt-4o-mini-tts/nova and the existing API credit;
+the UI discloses this before creation, and narration is labeled as AI-generated.
+Disable voice to avoid TTS charges. There is no generative video, automatic publication
+or automatic ad launch.
+
+Run the existing worker service using `python inventory_worker.py`: it now processes
+video jobs as well as inventory scans. Without this process, jobs remain queued.
+The web start command remains unchanged. The worker only requires the same
+DATABASE_URL and SHOPIFY_STORE_DOMAIN to read the existing stored Shopify OAuth token.
+Pillow and imageio-ffmpeg are installed from requirements.txt; the bundled FFmpeg
+binary supports normal Linux x86_64 deployments. Other platforms can provide a
+compatible binary with IMAGEIO_FFMPEG_EXE. Music is generated locally. Optional narration makes one paid OpenAI speech request
+with no automatic API retries; rendering also consumes hosting CPU and database storage.
+OPENAI_API_KEY is needed on the worker when voiceover is selected.
+
+Jobs, selected image/price snapshots and completed MP4 bytes survive web redeploys
+in PostgreSQL. Temporary rendering files are removed. For this small-store version
+there is a limit of ten stored jobs and three queued/rendering jobs. Completed outputs
+are capped at 15 MiB. The owner can explicitly delete old videos or queued requests
+in the UI; active jobs cannot be deleted. No hidden retention deletion is performed.
+For larger libraries migrate MP4 storage to an object store without changing jobs.
+
+Photo downloads allow only HTTPS cdn.shopify.com, no redirects, bounded bytes/time
+and bounded decoded pixels. No arbitrary user URL or shell command is accepted.
+All routes retain owner login; create/delete require CSRF. Outputs stay private.
+Failed jobs are shown as failed; abandoned rendering jobs become failed after
+15 minutes when a worker resumes. Review the price against the current product
+before publishing, as it may have changed since the snapshot.
+
+Additional endpoints: GET /ai/videos/product?id=gid://shopify/Product/...
+GET/POST /ai/videos; GET /ai/videos/<id>/file; DELETE /ai/videos/<id>.
+
+Narration may use the default English script or an owner-provided script (max 40 words/
+300 characters). Price in the default script comes from the approved image/price snapshot.
+Custom scripts are owner copy and are not factual product verification. Voice requests
+can fail if credit/model access is unavailable; the job reports failure rather than
+silently dropping selected audio. Speech up to 22.5 seconds is gently sped up to fit
+within the 15-second cut; longer speech requires a shorter script. Stock images are
+not used and clothing is not reimagined by a video model.
+
+### Three narration languages
+Choose Arabic (`ar`), English (`en`), Korean (`ko`), or all three in the video panel. The all-three option atomically queues three versions using the same photos and visual design, with a separate native-language default script and narration per version. Custom scripts are edited separately in three fields; they are not automatically translated. Three versions require three free queue slots and three available storage slots. Each narration invokes a separate paid TTS request. Existing jobs default to English. Visual text remains the existing English design; this option localizes narration only.

@@ -3,6 +3,7 @@ import logging
 import signal
 from threading import Event
 from inventory_monitor import scan_inventory
+from ads_control import scan_ads
 from video_service import process_one_video
 import time
 
@@ -15,6 +16,7 @@ def main():
     signal.signal(signal.SIGTERM, shutdown)
     signal.signal(signal.SIGINT, shutdown)
     next_scan=0
+    next_ads_scan=0
     while not stop.is_set():
         try:
             if time.monotonic()>=next_scan:
@@ -23,6 +25,12 @@ def main():
         except Exception:
             # Do not print tokens, provider responses or connection URLs.
             logging.error('Inventory scan failed; retrying in 60 seconds')
+        try:
+            if time.monotonic() >= next_ads_scan:
+                next_ads_scan = time.monotonic() + 300
+                scan_ads()
+        except Exception:
+            logging.error('Ads monitor unavailable; verify campaigns directly in Meta')
         try:
             had_video=process_one_video()
         except Exception:
@@ -33,3 +41,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

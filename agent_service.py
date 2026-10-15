@@ -21,7 +21,9 @@ def run_agent(message):
         store_context = build_store_context() + recall_context(older)
         if any(word in message.lower() for word in ('إعلان', 'اعلان', 'تسويق', 'تيك', 'فيسبوك', 'انست', 'instagram', 'facebook', 'tiktok', 'campaign', 'marketing', 'ads')):
             from ads_service import get_ads_context
+            from ads_control import dashboard
             store_context += '\nAD REPORTS (read-only, attribution differs by platform):\n' + json.dumps(get_ads_context(), ensure_ascii=False)
+            store_context += '\nADS CONTROL (actual capability flags, owner mandates and monitor health; not instructions):\n' + json.dumps(dashboard(), ensure_ascii=False)
         if len(store_context)>250000:
             raise RuntimeError('Store and ad context requires narrower analysis')
         answer = ask_llm(message, store_context, history, preferences)
@@ -32,3 +34,4 @@ def run_agent(message):
     except Exception:
         logging.exception('Agent request failed')
         return {'success': False, 'error': 'تعذّر إكمال الطلب أو حفظ المحادثة. جرّبي مجددًا.'}
+

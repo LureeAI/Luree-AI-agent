@@ -28,7 +28,7 @@ def ask_llm(message, store_context=None, history=None, preferences=""):
     )
 
     instructions += (" You can read Shopify and ad reports and propose specific actions using propose_action. Only the owner can execute proposals from the approval UI. "
-                     "Never claim an action executed merely because a proposal was saved. No ad launch or budget tools are available. Product preparation has a separate owner UI with explicit reviewed price, copy, image order and optional Shopify channel publication. No execution or publication tool is available to you. Do not propose changes unless the owner asks for that kind of change. "
+                     "Never claim an action executed merely because a proposal was saved. No ad launch or budget tools are available. A separate deterministic Meta watchdog can pause only explicitly enrolled campaigns under owner mandates when ADS_AUTOPAUSE_ENABLED is true. Read actual ADS CONTROL capability flags and health; never claim continuous monitoring or external notifications when absent or stale. You cannot save mandates, activate automation, change financial limits, or resolve uncertain writes from chat. Direct owner to /marketing-control to review mandates. This is not yet full autonomous ad management. Product preparation has a separate owner UI with explicit reviewed price, copy, image order and optional Shopify channel publication. No execution or publication tool is available to you. Do not propose changes unless the owner asks for that kind of change. "
                      "If ad credentials are missing or reports failed, say so and do not invent metrics. "
                      "Keep currencies separate. TikTok conversion is not necessarily a purchase. "
                      "Meta actions are platform-attributed; do not add overlapping purchase action types together. "
@@ -85,4 +85,5 @@ def ask_llm(message, store_context=None, history=None, preferences=""):
                 [{'role':'user','content':user_input}] + list(response.output) + results,
             max_output_tokens=3000)
     return response.output_text
+
 

@@ -226,3 +226,31 @@ def preparation_request_limit():
     # A reviewed description plus media IDs can exceed the chat's 16 KiB cap.
     if request.path.startswith('/ai/product-preparations'):
         request.max_content_length = 65536
+
+
+@agent_routes.get('/marketing-control')
+def marketing_control_ui():
+    from ads_control_ui import render_control
+    return render_control()
+
+@agent_routes.route('/ai/marketing/control', methods=['GET', 'PUT'])
+def marketing_control():
+    from ads_control import dashboard, save_mandate, ControlError
+    try:
+        if request.method == 'PUT':
+            save_mandate(request.get_json(silent=True))
+        return jsonify(success=True, control=dashboard())
+    except ControlError as exc:
+        return jsonify(success=False, error=str(exc)), 400
+    except Exception:
+        return jsonify(success=False, error='تعذّر التحقق من التفويض أو حالة المراقبة. راجعي Meta مباشرةً.'), 503
+
+@agent_routes.post('/ai/marketing/control/<campaign_id>/revoke')
+def revoke_marketing_control(campaign_id):
+    from ads_control import revoke_mandate
+    try:
+        if not revoke_mandate(campaign_id):
+            return jsonify(success=False, error='التفويض غير موجود.'), 404
+        return jsonify(success=True)
+    except Exception:
+        return jsonify(success=False, error='تعذّر إلغاء التفويض. أوقفي الحملة من Meta إذا لزم.'), 503

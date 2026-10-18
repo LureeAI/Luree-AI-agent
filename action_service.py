@@ -102,6 +102,12 @@ def _apply(kind,target,content,before):
             data={'status':'PAUSED'},timeout=20,allow_redirects=False)
         if response.status_code != 200 or response.json().get('success') is not True:
             raise ActionError('رفض Meta الإيقاف؛ يلزم ads_management.')
+        try:
+            verified = current_campaign(target).get('status') == 'PAUSED'
+        except Exception:
+            raise RuntimeError('Pause readback failed; reconcile without repeating the write') from None
+        if not verified:
+            raise RuntimeError('Pause was not verified; reconcile without repeating the write')
     else:
         raise ActionError('نوع إجراء غير مسموح.')
 
@@ -120,16 +126,38 @@ def decide_action(aid, decision):
         elif row[5]:
             state='expired'
         else:
-            try:
-                _apply(*row[:4])
-                state='completed'
-            except ActionError:
-                state='failed'
-            except Exception:
-                # May have reached the provider: require human reconciliation, never resend.
-                state='needs_review'
+            state='executing'
         conn.execute("UPDATE agent_actions SET state=%s,completed_at=NOW() WHERE id=%s AND shop=%s",
             (state,aid,store_key()))
+    if state != 'executing':
+        return state
+    # The execution claim has committed before any external write. A killed worker
+    # leaves 'executing', so a repeated approval cannot send the mutation again.
+    try:
+        _apply(*row[:4])
+        state='completed'
+    except ActionError:
+        state='failed'
+    except Exception:
+        state='needs_review'
+    with _connect() as conn:
+        conn.execute("UPDATE agent_actions SET state=%s,completed_at=NOW() WHERE id=%s AND shop=%s AND state='executing'",
+                     (state,aid,store_key()))
+    return state
+
+def reconcile_meta_pause(aid):
+    """Only observe provider state; never resend a campaign write."""
+    with _connect() as conn:
+        prepare(conn)
+        row=conn.execute("SELECT target,state FROM agent_actions WHERE id=%s AND shop=%s AND kind='meta_pause' FOR UPDATE",
+                         (aid,store_key())).fetchone()
+        if not row or row[1] not in ('executing','needs_review'):
+            raise ActionError('لا يوجد إيقاف حملة يحتاج تحققًا.')
+        # For executing, keep that state unless PAUSED is observed: an original
+        # worker may still be in flight. Reconciliation never authorizes a retry.
+        state='completed' if current_campaign(row[0]).get('status') == 'PAUSED' else row[1]
+        conn.execute("UPDATE agent_actions SET state=%s,completed_at=NOW() WHERE id=%s AND shop=%s",
+                     (state,aid,store_key()))
     return state
 
 PROPOSAL_TOOL = {

@@ -204,3 +204,28 @@ The default Gunicorn configuration uses a 180-second worker timeout for the
 multi-step approval request. A custom start command can override this setting.
 Copy generation has a 90-second timeout and no automatic OpenAI retries.
 Preparation request bodies have a 64 KiB cap; field-level limits still apply.
+
+
+### Advertising report verification
+
+Chat can request read-only ad reports with server-resolved periods (today, yesterday,
+last 7/30 completed days, previous calendar month, current month, or a custom range
+of up to 31 inclusive days). Meta periods use the verified ad account timezone.
+The report includes the account identity, currency, range and partial-day flag.
+Missing credentials and failed reads remain unavailable data, never zero sales.
+TikTok relative dates currently use Asia/Seoul and require advertiser-timezone confirmation.
+
+The owner-only `GET /ai/marketing/verify` endpoint and **فحص ربط ميتا** button verify
+the account metadata and an Insights read. Configure `META_ACCESS_TOKEN`,
+`META_AD_ACCOUNT_ID` and `META_API_VERSION` on the web service. Optional
+`META_EXPECTED_ACCOUNT_NAME`, `META_EXPECTED_CURRENCY`, `META_EXPECTED_TIMEZONE`
+reject unexpected account metadata. Verification does not expose credentials.
+Token expiry remains unknown; account task names do not prove write access.
+No live Meta connection is claimed until verification succeeds.
+
+Approved actions now commit an `executing` claim before any external mutation.
+An interrupted execution cannot be approved again. Meta pause additionally reads
+back the campaign status; an uncertain result needs review. The authenticated,
+CSRF-protected `POST /ai/actions/<id>/reconcile` only reads campaign state and never
+repeats the pause. An active state leaves the uncertain claim in place.
+No ad launch, budget change or automatic execution has been added.

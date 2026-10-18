@@ -74,6 +74,11 @@ def marketing_report():
     except ValueError as exc:
         return jsonify(success=False, error=str(exc)), 400
 
+@agent_routes.get('/ai/marketing/verify')
+def marketing_verify():
+    from ads_service import verify_meta_connection
+    return jsonify(success=True, meta=verify_meta_connection())
+
 @agent_routes.get('/ai/actions')
 def actions():
     from action_service import list_actions
@@ -91,6 +96,16 @@ def decide(action_id, decision):
         return jsonify(success=False, error=str(exc)), 409
     except Exception:
         return jsonify(success=False, error='تعذّر حفظ القرار؛ راجعي حالة الإجراء قبل المحاولة.'), 503
+
+@agent_routes.post('/ai/actions/<int:action_id>/reconcile')
+def reconcile_action(action_id):
+    from action_service import reconcile_meta_pause, ActionError
+    try:
+        return jsonify(success=True,state=reconcile_meta_pause(action_id))
+    except ActionError as exc:
+        return jsonify(success=False,error=str(exc)),409
+    except Exception:
+        return jsonify(success=False,error='تعذّر التحقق من حالة الحملة؛ لم يتم إرسال إيقاف جديد.'),503
 
 @agent_routes.get('/ai/videos/product')
 def video_product():

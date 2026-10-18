@@ -88,7 +88,7 @@ button:disabled{opacity:.5}
 <div class="controls"><button id="logout" type="button">تسجيل خروج</button></div>
 <details><summary>تعليماتي المحفوظة</summary><p>اكتبي قواعد المتجر وتفضيلاتك ليستخدمها الوكيل في كل محادثة.</p><textarea id="preferences" maxlength="4000" rows="3" aria-label="تعليمات محفوظة"></textarea><button id="save-memory" type="button">حفظ التعليمات</button></details>
 <details><summary>تنبيهات المخزون</summary><p id="inventory-status"></p><p>الحد: ٥٠ قطعة من مجموع مخزون المنتج. روابط الموردين للبحث فقط.</p><div id="inventory-alerts" style="max-height:200px;overflow:auto"></div></details>
-<details><summary>الإعلانات: TikTok وFacebook وInstagram</summary><p id="marketing-status">جاري تحميل حالة الربط…</p><button type="button" id="marketing-report">قراءة نتائج آخر ٧ أيام</button><button type="button" id="marketing-plan">تحليل الإعلانات وتحضير خطة</button><div id="marketing-results" style="max-height:200px;overflow:auto"></div></details>
+<details><summary>الإعلانات: TikTok وFacebook وInstagram</summary><p id="marketing-status">جاري تحميل حالة الربط…</p><button type="button" id="marketing-verify">فحص ربط ميتا</button><p id="marketing-verification" role="status"></p><button type="button" id="marketing-report">قراءة نتائج آخر ٧ أيام</button><button type="button" id="marketing-plan">تحليل الإعلانات وتحضير خطة</button><div id="marketing-results" style="max-height:200px;overflow:auto"></div></details>
 <details><summary>إجراءات تنتظر موافقتي</summary><p>راجعي التغيير قبل الموافقة. هذه النسخة تدعم عنوان ووصف المنتج وإيقاف حملة Meta.</p><div id="actions" style="max-height:200px;overflow:auto"></div></details>
 <details id="product-preparer"><summary>تجهيز فستان ومناقشة سعره</summary>
 <details id="prep-import-list"><summary>Import List — قائمة الاستيراد</summary>
@@ -378,6 +378,9 @@ document.getElementById('marketing-report').addEventListener('click', async (eve
       }
       text.textContent = platform + ' — ' + report.start_date + ' إلى ' + report.end_date;
       output.append(text);
+      if (report.account) {
+        const account=document.createElement('p'); account.textContent=report.account.name+' — '+report.account.currency+' — '+report.account.timezone; output.append(account);
+      }
       if (!report.rows.length) {
         const empty = document.createElement('p'); empty.textContent = 'لا توجد نتائج في هذه المدة.'; output.append(empty);
       }
@@ -391,6 +394,19 @@ document.getElementById('marketing-report').addEventListener('click', async (eve
     }
   } catch { output.textContent = 'تعذّر تحميل التقرير.'; }
   finally { button.disabled = false; }
+});
+document.getElementById('marketing-verify').addEventListener('click', async (event) => {
+  const button=event.currentTarget, output=document.getElementById('marketing-verification');
+  button.disabled=true; output.textContent='جاري فحص الحساب وصلاحية قراءة التقرير…';
+  try {
+    const response=await fetch('/ai/marketing/verify');
+    if(!response.ok) throw new Error();
+    const {meta}=await response.json();
+    output.textContent=meta.verified ?
+      'تم التحقق من قراءة التقرير — '+meta.account.name+' — رقم الحساب: '+meta.account.id+' — العملة: '+meta.account.currency+' — التوقيت: '+meta.account.timezone+' — مهام الحساب: '+(meta.account.tasks.join(', ') || 'غير متاحة')+' — تاريخ انتهاء المفتاح غير معروف.' :
+      (meta.error || 'يلزم إعداد: '+(meta.missing || []).join(', '));
+  } catch { output.textContent='تعذّر فحص الربط. لم يتم تأكيد الاتصال.'; }
+  finally { button.disabled=false; }
 });
 document.getElementById('marketing-plan').addEventListener('click', () => {
   input.value = 'حلّل بيانات الإعلانات المتاحة على TikTok وFacebook وInstagram مع بيانات المتجر. اذكر الحسابات غير المتصلة، واقترح خطة إعلانات عملية ونصوصًا للمنتجات المتوفرة. ميّز بين النقرات والتحويلات والمشتريات المؤكدة، ولا تفترض ميزانية أو تشغّل إعلانًا.';
@@ -408,7 +424,7 @@ async function loadActions() {
       const item = document.createElement('div'); item.className = 'bubble agent';
       const text = document.createElement('p');
       const old = action.kind === 'product_title' ? action.before.title : action.kind === 'product_description' ? action.before.descriptionHtml : action.before.status;
-      const states = {pending:'بانتظار الموافقة',completed:'تم التنفيذ',rejected:'مرفوض',failed:'فشل التنفيذ',expired:'انتهت صلاحية الاقتراح',needs_review:'راجعي المنصة؛ نتيجة التنفيذ غير مؤكدة'};
+      const states = {pending:'بانتظار الموافقة',executing:'بدأ التنفيذ؛ تحققي من الحالة قبل أي إجراء جديد',completed:'تم التنفيذ',rejected:'مرفوض',failed:'فشل التنفيذ',expired:'انتهت صلاحية الاقتراح',needs_review:'راجعي المنصة؛ نتيجة التنفيذ غير مؤكدة'};
       text.textContent = action.kind + ' — ' + action.target + '\nالسبب: ' + action.reason + '\nقبل: ' + old + '\nبعد: ' + action.content + '\nالحالة: ' + (states[action.state] || action.state);
       item.append(text);
       if (action.state === 'pending') {
@@ -425,6 +441,19 @@ async function loadActions() {
           });
           item.append(button);
         }
+      }
+      if (action.kind === 'meta_pause' && ['executing','needs_review'].includes(action.state)) {
+        const button=document.createElement('button'); button.type='button'; button.textContent='التحقق من حالة الحملة دون إعادة الإيقاف';
+        button.addEventListener('click',async () => {
+          button.disabled=true;
+          try {
+            const response=await fetch('/ai/actions/'+action.id+'/reconcile',{method:'POST',headers:{'X-CSRF-Token':csrf}});
+            const result=await response.json();
+            if(!response.ok) throw new Error(result.error || 'تعذّر التحقق.');
+            await loadActions();
+          } catch(error) { status.textContent=error.message; button.disabled=false; }
+        });
+        item.append(button);
       }
       list.append(item);
     }

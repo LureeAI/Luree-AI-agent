@@ -52,7 +52,7 @@ class AdReportsTests(unittest.TestCase):
             'paging':{'next':'https://malicious.example','cursors':{'after':'next'}}},
             {'data':[{'campaign_id':'1','publisher_platform':'instagram','spend':'3','account_currency':'USD'}]}]
         with patch.dict(os.environ,{'META_ACCESS_TOKEN':'PRIVATE','META_AD_ACCOUNT_ID':'123','META_API_VERSION':'v25.0'}),patch('ads_service._json_get',side_effect=pages) as fetch:
-            result=ads_service.meta_report('2026-09-01','2026-09-07')
+            result=ads_service.meta_report('2026-09-01','2026-09-07',account_info={'id':'123','name':'Luree Fashions Ads','currency':'USD','timezone':'Asia/Seoul'})
             self.assertEqual([r['placement'] for r in result['rows']],['facebook','instagram'])
             self.assertTrue(all(c.args[0].startswith('https://graph.facebook.com/') for c in fetch.call_args_list))
             self.assertEqual(result['rows'][0]['spend'],2)
@@ -73,7 +73,7 @@ class AdReportsTests(unittest.TestCase):
     def test_private_endpoints(self):
         from app import app
         client=app.test_client()
-        for path in ['/ai/marketing/status','/ai/marketing/report','/ai/inventory/alerts']:
+        for path in ['/ai/marketing/status','/ai/marketing/verify','/ai/marketing/report','/ai/inventory/alerts']:
             self.assertEqual(client.get(path).status_code,401)
         with client.session_transaction() as session:
             session['owner']=True

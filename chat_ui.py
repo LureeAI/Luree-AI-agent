@@ -88,7 +88,39 @@ button:disabled{opacity:.5}
 <div class="controls"><button id="logout" type="button">تسجيل خروج</button></div>
 <details><summary>تعليماتي المحفوظة</summary><p>اكتبي قواعد المتجر وتفضيلاتك ليستخدمها الوكيل في كل محادثة.</p><textarea id="preferences" maxlength="4000" rows="3" aria-label="تعليمات محفوظة"></textarea><button id="save-memory" type="button">حفظ التعليمات</button></details>
 <details><summary>تنبيهات المخزون</summary><p id="inventory-status"></p><p>الحد: ٥٠ قطعة من مجموع مخزون المنتج. روابط الموردين للبحث فقط.</p><div id="inventory-alerts" style="max-height:200px;overflow:auto"></div></details>
-<details><summary>الإعلانات: TikTok وFacebook وInstagram</summary><p id="marketing-status">جاري تحميل حالة الربط…</p><button type="button" id="marketing-verify">فحص ربط ميتا</button><p id="marketing-verification" role="status"></p><button type="button" id="marketing-report">قراءة نتائج آخر ٧ أيام</button><button type="button" id="marketing-plan">تحليل الإعلانات وتحضير خطة</button><div id="marketing-results" style="max-height:200px;overflow:auto"></div></details>
+<details><summary>الإعلانات: TikTok وFacebook وInstagram</summary><p id="marketing-status">جاري تحميل حالة الربط…</p><button type="button" id="marketing-verify">فحص ربط ميتا</button><p id="marketing-verification" role="status"></p><button type="button" id="marketing-report">قراءة نتائج آخر ٧ أيام</button><button type="button" id="marketing-plan">تحليل الإعلانات وتحضير خطة</button><div id="marketing-results" style="max-height:200px;overflow:auto"></div>
+<h3>أرشيف نتائج الحملات</h3><p>يحفظ نتائج الأيام المكتملة. المزامنة للقراءة فقط، وتحتاج تشغيل عامل الأرشفة وصلاحيات المنصة. لا تشغّل إعلانات.</p>
+<label>المنصة <select id="ads-platform"><option value="meta">Facebook وInstagram</option><option value="tiktok">TikTok</option></select></label>
+<label>من <input type="date" id="ads-start"></label><label>إلى <input type="date" id="ads-end"></label>
+<button type="button" id="ads-sync">طلب حفظ النتائج (حتى ٣١ يومًا)</button>
+<button type="button" id="ads-status">تحديث حالة الأرشيف</button><p id="ads-notice" role="status"></p>
+<label>الحساب المحفوظ <select id="ads-account"></select></label>
+<label>المستوى <select id="ads-level"><option value="campaign">الحملات</option><option value="adgroup">المجموعات الإعلانية</option><option value="ad">الإعلانات</option></select></label>
+<button type="button" id="ads-history">قراءة النتائج المحفوظة</button>
+<pre id="ads-history-result" style="white-space:pre-wrap;max-height:350px;overflow:auto"></pre>
+<h3>تحليل الربحية ومراجعة القرارات</h3>
+<p>اختاري الحساب والتواريخ والمستوى أعلاه. التكاليف التالية متوسطات لكل طلب بعملة حساب الإعلان، وليست لكل قطعة. اتركي المجهول فارغًا؛ لا يعتبره لوري صفرًا.</p>
+<label>عملة التكاليف <input id="mgr-currency" maxlength="3" placeholder="USD"></label>
+<label>اسم حدث الشراء المطابق للتقرير <input id="mgr-event" placeholder="مثال: offsite_conversion.fb_pixel_purchase"></label>
+<label>حدث مشاهدة صفحة الوصول <input id="mgr-lpv" placeholder="اسم الحدث كما يظهر بالتقرير"></label>
+<label>حدث الإضافة للسلة <input id="mgr-cart" placeholder="اسم الحدث كما يظهر بالتقرير"></label>
+<label>حدث بدء الدفع <input id="mgr-checkout" placeholder="اسم الحدث كما يظهر بالتقرير"></label>
+<label>تكلفة المنتجات لكل طلب <input id="mgr-product" type="number" min="0" step="any"></label>
+<label>الشحن لكل طلب <input id="mgr-shipping" type="number" min="0" step="any"></label>
+<label>رسوم الدفع ٪ من الإيراد <input id="mgr-percent" type="number" min="0" max="100" step="any"></label>
+<label>رسوم ثابتة لكل طلب <input id="mgr-fixed" type="number" min="0" step="any"></label>
+<label>تقدير المرتجعات ٪ من الإيراد <input id="mgr-refund" type="number" min="0" max="100" step="any"></label>
+<label>الضرائب ٪ من الإيراد <input id="mgr-tax" type="number" min="0" max="100" step="any"></label>
+<label>حد تنبيه الصرف اليومي <input id="mgr-limit" type="number" min="0" step="any"></label>
+<label><input id="mgr-basis" type="checkbox">تأكدت أن قيمة حدث الشراء تمثل الإيراد قبل خصم المرتجعات والضرائب</label>
+<label><input id="mgr-monitor" type="checkbox">تفعيل تحديث وتحليل دوري كل ساعة عند تشغيل عامل الأرشفة</label>
+<p>قواعد البداية قابلة للتعديل عبر السياسة: ١٠٠٠ ظهور، ٥٠ نقرة، ٥ مشتريات، مهلة تحويل يومان، واقتراح زيادة أقصاه ١٥٪. هذه حدود إرشادية وليست إثباتًا إحصائيًا. الأرباح تقديرية ولا تشمل مصاريف لم تدخليها.</p>
+<button type="button" id="mgr-load">تحميل سياسة الحساب</button><button type="button" id="mgr-save">حفظ التكاليف والسياسة</button>
+<button type="button" id="mgr-analyze">تحليل الفترة ومقارنتها</button><button type="button" id="mgr-refresh">تحديث التحليلات والتنبيهات</button>
+<button type="button" id="mgr-reconcile">مراجعة المشتريات مقابل شوبيفاي</button>
+<label>رابط المنتج للتتبّع <input id="mgr-url" type="url" placeholder="https://..."></label>
+<label>رقم الحملة <input id="mgr-campaign" inputmode="numeric"></label><label>رقم الإعلان <input id="mgr-ad" inputmode="numeric"></label>
+<button type="button" id="mgr-track">تجهيز رابط UTM فقط</button><p id="mgr-notice" role="status"></p><pre id="mgr-reconciliation" style="white-space:pre-wrap"></pre><div id="mgr-results"></div><div id="mgr-alerts"></div></details>
 <details><summary>إجراءات تنتظر موافقتي</summary><p>راجعي التغيير قبل الموافقة. هذه النسخة تدعم عنوان ووصف المنتج وإيقاف حملة Meta.</p><div id="actions" style="max-height:200px;overflow:auto"></div></details>
 <details id="product-preparer"><summary>تجهيز فستان ومناقشة سعره</summary>
 <details id="prep-import-list"><summary>Import List — قائمة الاستيراد</summary>
@@ -412,6 +444,117 @@ document.getElementById('marketing-plan').addEventListener('click', () => {
   input.value = 'حلّل بيانات الإعلانات المتاحة على TikTok وFacebook وInstagram مع بيانات المتجر. اذكر الحسابات غير المتصلة، واقترح خطة إعلانات عملية ونصوصًا للمنتجات المتوفرة. ميّز بين النقرات والتحويلات والمشتريات المؤكدة، ولا تفترض ميزانية أو تشغّل إعلانًا.';
   input.focus();
 });
+
+async function loadAdArchive() {
+  const out=document.getElementById('ads-notice');
+  try {
+    const r=await fetch('/ai/marketing/archive/status');const data=await r.json();
+    if(!r.ok || !data.success) throw new Error(data.error || 'تعذّر قراءة الأرشيف');
+    const select=document.getElementById('ads-account');select.replaceChildren();
+    for(const a of data.accounts){const option=document.createElement('option');
+      option.value=JSON.stringify({platform:a.platform,id:a.id});
+      option.textContent=a.platform+' — '+(a.name||a.id)+' — '+a.currency+' — '+a.timezone;
+      select.append(option);}
+    out.textContent=(data.accounts.length ? 'الحسابات المحفوظة: '+data.accounts.length : 'الأرشيف جاهز، لم تُحفظ بيانات حسابات بعد.')+
+      ' | آخر الطلبات: '+data.recent_runs.slice(0,4).map(j=>j.platform+' '+j.status+' ('+j.days_saved+' يوم)'+(j.error_code?' — '+j.error_code:'')).join('، ');
+  }catch(e){out.textContent=e.message;}
+}
+document.getElementById('ads-status').addEventListener('click',loadAdArchive);
+document.getElementById('ads-sync').addEventListener('click',async (event)=>{
+  const b=event.currentTarget;b.disabled=true;
+  try{
+    const r=await fetch('/ai/marketing/sync',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},
+      body:JSON.stringify({platform:document.getElementById('ads-platform').value,start:document.getElementById('ads-start').value,end:document.getElementById('ads-end').value})});
+    const data=await r.json();if(!r.ok || !data.success)throw new Error(data.error||'تعذّر طلب المزامنة');
+    document.getElementById('ads-notice').textContent='تم تسجيل الطلب '+data.id+' بانتظار عامل الأرشفة. اضغطي تحديث الحالة لاحقًا؛ التسجيل ليس اكتمال المزامنة.';
+  }catch(e){document.getElementById('ads-notice').textContent=e.message;}finally{b.disabled=false;}
+});
+document.getElementById('ads-history').addEventListener('click',async(event)=>{
+  const b=event.currentTarget,out=document.getElementById('ads-history-result');b.disabled=true;
+  try{
+    const a=JSON.parse(document.getElementById('ads-account').value);
+    const q=new URLSearchParams({platform:a.platform,account_id:a.id,start:document.getElementById('ads-start').value,end:document.getElementById('ads-end').value,level:document.getElementById('ads-level').value});
+    const r=await fetch('/ai/marketing/archive?'+q);const data=await r.json();
+    if(!r.ok || !data.success)throw new Error(data.error||'تعذّر قراءة النتائج');
+    const report=data.report;
+    out.textContent='بيانات محفوظة وليست مباشرة — '+report.start_date+' إلى '+report.end_date+'\n'+
+      'العملة: '+(report.account?.currency||'غير متاحة')+' — الأيام الناقصة: '+(report.missing_dates.join(', ')||'لا يوجد')+'\n'+
+      'آخر حفظ للأيام: '+report.days.map(d=>d.date+' / '+d.saved_at).join('، ')+'\n'+
+      JSON.stringify(report.totals_for_available_days,null,2)+'\nالتحويلات منسوبة للمنصة وليست طلبات مؤكدة. افتحي المحادثة لطلب تحليل الأرشيف.';
+  }catch(e){out.textContent=e.message||'اختاري حسابًا محفوظًا وتواريخ.';}finally{b.disabled=false;}
+});
+loadAdArchive();
+
+
+const costFields={product_cost_per_order:'mgr-product',shipping_cost_per_order:'mgr-shipping',payment_fee_percent:'mgr-percent',fixed_fee_per_order:'mgr-fixed',refund_rate_percent:'mgr-refund',tax_percent_of_revenue:'mgr-tax'};
+let managerRules={};
+document.getElementById('ads-account').addEventListener('change',()=>{managerRules={};for(const id of Object.values(costFields))document.getElementById(id).value='';for(const id of ['mgr-event','mgr-currency','mgr-limit','mgr-lpv','mgr-cart','mgr-checkout'])document.getElementById(id).value='';document.getElementById('mgr-basis').checked=false;document.getElementById('mgr-monitor').checked=false;document.getElementById('mgr-results').replaceChildren();document.getElementById('mgr-alerts').replaceChildren();document.getElementById('mgr-notice').textContent='تم تغيير الحساب؛ حمّلي سياسته أو أدخلي تكاليفه.';});
+function managerAccount(){return JSON.parse(document.getElementById('ads-account').value);}
+async function managerRequest(path,method='GET',body){
+  const r=await fetch(path,{method,headers:{'Content-Type':'application/json','X-CSRF-Token':csrf},...(body?{body:JSON.stringify(body)}:{})});
+  const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'تعذّر إكمال الطلب');return d;
+}
+async function managerAction(fn){try{await fn();}catch(e){document.getElementById('mgr-notice').textContent=e.message||'اختاري حسابًا محفوظًا أولًا.';}}
+document.getElementById('mgr-load').onclick=()=>managerAction(async()=>{
+  const a=managerAccount(),d=await managerRequest('/ai/marketing/policy?'+new URLSearchParams({platform:a.platform,account_id:a.id}));
+  const p=d.policy;if(!p)throw new Error('لا توجد سياسة محفوظة لهذا الحساب؛ أدخلي التكاليف المعروفة.');
+  managerRules=p.rules;for(const [k,id]of Object.entries({landing_page_view:'mgr-lpv',add_to_cart:'mgr-cart',initiate_checkout:'mgr-checkout'}))document.getElementById(id).value=p.funnel_events?.[k]||'';document.getElementById('mgr-currency').value=p.currency;document.getElementById('mgr-event').value=p.purchase_event||'';
+  for(const [k,id] of Object.entries(costFields))document.getElementById(id).value=p.costs[k]??'';
+  document.getElementById('mgr-limit').value=p.daily_spend_limit??'';document.getElementById('mgr-basis').checked=!!p.purchase_value_basis;document.getElementById('mgr-monitor').checked=p.monitoring_enabled;
+  document.getElementById('mgr-notice').textContent='تم تحميل سياسة الحساب؛ راجعي التكاليف قبل الحفظ.';
+});
+document.getElementById('mgr-save').onclick=()=>managerAction(async()=>{
+  const a=managerAccount(),costs={};for(const[k,id]of Object.entries(costFields))costs[k]=document.getElementById(id).value||null;
+  const p={currency:document.getElementById('mgr-currency').value.trim().toUpperCase(),purchase_event:document.getElementById('mgr-event').value.trim()||null,
+    funnel_events:{landing_page_view:document.getElementById('mgr-lpv').value.trim()||null,add_to_cart:document.getElementById('mgr-cart').value.trim()||null,initiate_checkout:document.getElementById('mgr-checkout').value.trim()||null},purchase_value_basis:document.getElementById('mgr-basis').checked?'revenue_before_refunds_and_taxes':null,costs,rules:managerRules,
+    daily_spend_limit:document.getElementById('mgr-limit').value||null,monitoring_enabled:document.getElementById('mgr-monitor').checked};
+  for(const k of Object.keys(p.funnel_events))if(p.funnel_events[k]===null)delete p.funnel_events[k];
+  const d=await managerRequest('/ai/marketing/policy','PUT',{platform:a.platform,account_id:a.id,policy:p});managerRules=d.policy.rules;
+  document.getElementById('mgr-notice').textContent='تم حفظ السياسة. تفعيل المتابعة يحتاج عامل الأرشفة وصلاحيات المنصة؛ لا ينفذ إنفاقًا.';
+});
+const decisionNames={wait_for_data:'انتظار اكتمال البيانات',review_creative:'مراجعة الإعلان',request_data:'استكمال البيانات والتكاليف',continue_observation:'متابعة وجمع عينة أكبر',propose_pause:'اقتراح إيقاف للمراجعة',propose_budget_increase:'اقتراح زيادة محدودة للمراجعة',hold_budget:'الإبقاء على الميزانية',verify_shopify_before_scaling:'تأكيد طلبات شوبيفاي قبل زيادة الميزانية'};
+function renderManagerAnalysis(a,id){
+  const box=document.getElementById('mgr-results');box.replaceChildren();
+  const head=document.createElement('p');head.textContent='تحليل '+a.start_date+' إلى '+a.end_date+' — '+a.currency+' — تحذيرات البيانات: '+(a.data_warnings.join(', ')||'لا يوجد')+' — لا تنفيذ تلقائي.';box.append(head);
+  for(const e of a.entities){const card=document.createElement('section');card.style.border='1px solid #777';card.style.padding='12px';
+    const h=document.createElement('h4');h.textContent=(e.entity_name||e.entity_id)+' — '+e.placement;card.append(h);
+    const p=document.createElement('p'),m=e.metrics;p.textContent='الصرف: '+(m.spend??'غير متاح')+' — CPA شراء: '+(m.purchase_cpa??'غير متاح')+' — ROAS: '+(m.roas??'غير متاح')+' — مساهمة تقديرية بعد الإعلان: '+(m.estimated_contribution_after_ads??'التكاليف أو المشتريات غير مكتملة');card.append(p);
+    for(const f of e.findings){const line=document.createElement('p');line.textContent=(decisionNames[f.decision]||f.decision)+' — '+f.reason;card.append(line);
+      if(f.requires_owner_approval){for(const[outcome,label]of [['accepted_for_review','سجّل للمراجعة فقط'],['rejected','رفض الاقتراح'],['deferred','تأجيل']]){const b=document.createElement('button');b.type='button';b.textContent=label;b.onclick=()=>managerAction(async()=>{await managerRequest('/ai/marketing/decisions','POST',{analysis_id:id,entity_id:e.entity_id,placement:e.placement,code:f.code,outcome});document.getElementById('mgr-notice').textContent='سُجل القرار للمراجعة، ولم ينفذ أي تغيير أو صرف.';});card.append(b);}}
+    }
+    const diagnostic=a.diagnostics?.entities.find(x=>x.entity_id===e.entity_id&&x.placement===e.placement);
+    if(diagnostic){const p=document.createElement('p');p.textContent='مسار الأحداث (ليست أعداد زوار فريدين): '+Object.entries(diagnostic.event_counts).map(([k,v])=>k+': '+(v??'غير متاح')).join(' — ');card.append(p);
+      const v=document.createElement('p');v.textContent='معدل إكمال الفيديو: '+(diagnostic.video.completion_rate_percent??'غير متاح')+'٪ — معدّل مشاهدة ثانيتين: '+(diagnostic.video.two_second_view_rate_percent??'غير متاح')+'٪';card.append(v);}
+    box.append(card);
+  }
+}
+document.getElementById('mgr-analyze').onclick=()=>managerAction(async()=>{
+  const a=managerAccount(),d=await managerRequest('/ai/marketing/analysis','POST',{platform:a.platform,account_id:a.id,start:document.getElementById('ads-start').value,end:document.getElementById('ads-end').value,level:document.getElementById('ads-level').value});
+  renderManagerAnalysis(d.analysis,d.analysis.analysis_id);document.getElementById('mgr-notice').textContent='تم حفظ التحليل وأدلته؛ التوصيات تحتاج مراجعتك.';
+});
+document.getElementById('mgr-refresh').onclick=()=>managerAction(async()=>{
+  const a=managerAccount(),d=await managerRequest('/ai/marketing/manager');
+  document.getElementById('mgr-notice').textContent='حالة المتابعة: '+d.monitor_health.filter(x=>x.platform===a.platform&&x.account_id===a.id).map(x=>x.stage+': '+x.status+' ('+x.checked_at+')').join(' — ');
+  const latest=d.analyses.find(x=>x.platform===a.platform&&x.account_id===a.id);if(latest)renderManagerAnalysis(latest.report,latest.id);
+  const out=document.getElementById('mgr-alerts');out.replaceChildren();
+  for(const alert of d.alerts.filter(x=>x.platform===a.platform&&x.account_id===a.id&&!x.acknowledged_at&&!x.resolved_at)){
+    const p=document.createElement('p');p.textContent='تنبيه '+alert.created_at+' — '+(alert.evidence.reason||alert.evidence.code);
+    const b=document.createElement('button');b.type='button';b.textContent='تمت المراجعة';b.onclick=()=>managerAction(async()=>{await managerRequest('/ai/marketing/alerts/'+alert.id+'/acknowledge','POST');p.remove();});p.append(b);out.append(p);
+  }
+});
+
+
+document.getElementById('mgr-reconcile').onclick=()=>managerAction(async()=>{
+  const a=managerAccount();document.getElementById('mgr-notice').textContent='جاري قراءة الطلبات المدفوعة والمرتجعات ومصدرها…';
+  const d=await managerRequest('/ai/marketing/reconcile','POST',{platform:a.platform,account_id:a.id,start:document.getElementById('ads-start').value,end:document.getElementById('ads-end').value});
+  const r=d.report;document.getElementById('mgr-reconciliation').textContent='طلبات مدفوعة ضمن طلبات الفترة: '+r.confirmed_paid_orders_in_cohort+'\nمبالغ محصّلة لمجموعة الطلبات غير التجريبية (تشمل الملغاة): '+r.cohort_total_received+' '+r.shop_currency+'\nمرتجعات: '+r.cohort_total_refunded+'\nصافي نقد هذه المجموعة: '+r.cohort_net_cash+'\nمشتريات منسوبة للمنصة: '+(r.platform_attributed_purchases??'غير متاحة')+'\nمطابقة حسب حملة UTM: '+r.matched_campaigns.map(x=>x.campaign_id+': '+x.paid_orders).join('، ')+'\nهذه مقارنة أدلة ومجموعة طلبات، وليست إثباتًا أن كل طلب سببه الإعلان أو أن فروق القيم تعني خللًا. الضرائب والشحن والإسناد والتواريخ قد تختلف.';
+  document.getElementById('mgr-notice').textContent='حُفظت مراجعة المشتريات دون بيانات شخصية للعملاء.';
+});
+document.getElementById('mgr-track').onclick=()=>managerAction(async()=>{
+  const a=managerAccount(),d=await managerRequest('/ai/marketing/tracking-url','POST',{destination:document.getElementById('mgr-url').value,platform:a.platform,campaign_id:document.getElementById('mgr-campaign').value,ad_id:document.getElementById('mgr-ad').value});
+  document.getElementById('mgr-reconciliation').textContent=d.url+'\nرابط جاهز للنسخ، لم يُنشر ولم يتغير أي إعلان. يعمل للتتبّع المستقبلي فقط.';
+});
+
 async function loadActions() {
   const list = document.getElementById('actions');
   try {

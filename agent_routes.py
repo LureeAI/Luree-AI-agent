@@ -241,3 +241,111 @@ def preparation_request_limit():
     # A reviewed description plus media IDs can exceed the chat's 16 KiB cap.
     if request.path.startswith('/ai/product-preparations'):
         request.max_content_length = 65536
+
+
+@agent_routes.get('/ai/marketing/archive/status')
+def ad_archive_status():
+    from advertising_store import status
+    try:
+        return jsonify(success=True, **status())
+    except Exception:
+        return jsonify(success=False,error='تعذّر قراءة أرشيف الحملات.'),503
+
+
+@agent_routes.get('/ai/marketing/archive')
+def ad_archive():
+    from advertising_store import read_history
+    try:
+        result=read_history(request.args.get('platform',''),request.args.get('account_id',''),
+            request.args.get('start',''),request.args.get('end',''),request.args.get('level','campaign'))
+        return jsonify(success=True,report=result)
+    except (ValueError,TypeError):
+        return jsonify(success=False,error='حددي المنصة والحساب والمستوى وفترة لا تتجاوز ٩٢ يومًا.'),400
+    except Exception:
+        return jsonify(success=False,error='تعذّر قراءة أرشيف الحملات.'),503
+
+
+@agent_routes.post('/ai/marketing/sync')
+def ad_sync():
+    from advertising_sync import queue_sync
+    from ads_service import AdsError
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict):
+        return jsonify(success=False,error='بيانات المزامنة غير صحيحة.'),400
+    try:
+        return jsonify(success=True,**queue_sync(data.get('platform'),data.get('start'),data.get('end'))),202
+    except (ValueError,TypeError):
+        return jsonify(success=False,error='اختاري منصة وأيامًا مكتملة بمدة حتى ٣١ يومًا؛ قد توجد طلبات كثيرة قيد الانتظار.'),400
+    except AdsError:
+        return jsonify(success=False,error='تعذّر التحقق من حساب الإعلانات؛ راجعي بيانات الربط والصلاحيات.'),502
+    except Exception:
+        return jsonify(success=False,error='تعذّر تسجيل المزامنة.'),503
+
+
+@agent_routes.route('/ai/marketing/policy',methods=['GET','PUT'])
+def marketing_policy():
+    from marketing_manager import load_policy,save_policy
+    data=request.get_json(silent=True) if request.method=='PUT' else request.args
+    if not data:return jsonify(success=False,error='بيانات السياسة مطلوبة.'),400
+    try:
+        platform,aid=data.get('platform'),data.get('account_id')
+        policy=save_policy(platform,aid,data.get('policy')) if request.method=='PUT' else load_policy(platform,aid)
+        return jsonify(success=True,policy=policy)
+    except (ValueError,TypeError,KeyError):return jsonify(success=False,error='راجعي الحساب والعملة والتكاليف وقواعد القرار.'),400
+    except Exception:return jsonify(success=False,error='تعذّر الوصول للسياسة.'),503
+
+
+@agent_routes.post('/ai/marketing/analysis')
+def marketing_analysis():
+    from marketing_manager import run_analysis
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict):return jsonify(success=False,error='بيانات غير صحيحة.'),400
+    try:
+        return jsonify(success=True,analysis=run_analysis(data.get('platform'),data.get('account_id'),data.get('start'),data.get('end'),data.get('level','campaign')))
+    except (ValueError,TypeError):return jsonify(success=False,error='راجعي السياسة والحساب والفترة.'),400
+    except Exception:return jsonify(success=False,error='تعذّر التحليل؛ لم ينفذ أي إجراء.'),503
+
+
+@agent_routes.get('/ai/marketing/manager')
+def marketing_dashboard():
+    from marketing_manager import dashboard
+    try:return jsonify(success=True,**dashboard())
+    except Exception:return jsonify(success=False,error='تعذّر قراءة التحليلات والتنبيهات.'),503
+
+
+@agent_routes.post('/ai/marketing/alerts/<int:alert_id>/acknowledge')
+def marketing_ack(alert_id):
+    from marketing_manager import acknowledge
+    try:
+        if not acknowledge(alert_id):return jsonify(success=False,error='التنبيه غير موجود.'),404
+        return jsonify(success=True)
+    except Exception:return jsonify(success=False,error='تعذّر حفظ مراجعة التنبيه.'),503
+
+
+@agent_routes.post('/ai/marketing/decisions')
+def marketing_decision():
+    from marketing_manager import record_decision
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict):return jsonify(success=False,error='بيانات غير صحيحة.'),400
+    try:return jsonify(success=True,**record_decision(data.get('analysis_id'),data.get('entity_id'),data.get('placement'),data.get('code'),data.get('outcome'),data.get('note','')))
+    except (ValueError,TypeError):return jsonify(success=False,error='القرار أو دليله غير صحيح.'),400
+    except Exception:return jsonify(success=False,error='تعذّر تسجيل القرار؛ لم ينفذ أي إجراء.'),503
+
+
+@agent_routes.post('/ai/marketing/reconcile')
+def marketing_reconcile():
+    from shopify_reconciliation import reconcile_orders
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict):return jsonify(success=False,error='بيانات غير صحيحة.'),400
+    try:return jsonify(success=True,report=reconcile_orders(data.get('platform'),data.get('account_id'),data.get('start'),data.get('end')))
+    except (ValueError,TypeError,KeyError):return jsonify(success=False,error='راجعي الحساب والسياسة والفترة وصلاحية قراءة الطلبات.'),400
+    except Exception:return jsonify(success=False,error='تعذّر جلب الطلبات كاملة؛ لم تُرجع مطابقة جزئية.'),503
+
+
+@agent_routes.post('/ai/marketing/tracking-url')
+def marketing_tracking_url():
+    from shopify_reconciliation import tracking_url
+    data=request.get_json(silent=True)
+    if not isinstance(data,dict):return jsonify(success=False,error='بيانات غير صحيحة.'),400
+    try:return jsonify(success=True,**tracking_url(data.get('destination',''),data.get('platform'),data.get('campaign_id'),data.get('ad_id')))
+    except (ValueError,TypeError):return jsonify(success=False,error='حددي رابط المتجر المسموح ومعرّفات الحملة والإعلان الرقمية.'),400

@@ -132,7 +132,30 @@ def _number(value):
     except InvalidOperation:
         return None
 
-def meta_report(start, end, account_info=None):
+def _single_action_metric(items,precise=False):
+    if items is None:return None
+    if not isinstance(items,list) or len(items)!=1 or not isinstance(items[0],dict):return None
+    return _metric(items[0].get('value'),precise)
+
+def _metric(value, precise=False):
+    if precise:
+        if value is None or value == '':
+            return None
+        try:
+            n = Decimal(str(value))
+        except InvalidOperation:
+            raise AdsError('Invalid numeric report metric') from None
+        if not n.is_finite() or n < 0:
+            raise AdsError('Invalid numeric report metric')
+        return str(n)
+    return _number(value)
+
+def meta_report(start, end, account_info=None, level='campaign', precise=False, website_metrics=False):
+    if level not in ('campaign','adgroup','ad'):
+        raise ValueError('Unsupported report level')
+    provider_level = 'adset' if level == 'adgroup' else level
+    entity_field = provider_level + '_id'
+    name_field = provider_level + '_name'
     start, end = _dates(start, end)
     account, version, headers = _meta_config()
     account_info = account_info or meta_account()
@@ -140,6 +163,11 @@ def meta_report(start, end, account_info=None):
     params = {'fields': 'campaign_id,campaign_name,impressions,clicks,spend,ctr,cpc,actions,action_values,account_currency,date_start,date_stop',
         'time_range':json.dumps({'since':start,'until':end}), 'level':'campaign',
         'breakdowns':'publisher_platform','limit':100}
+    params['level'] = provider_level
+    if website_metrics:
+        params['fields'] += ',reach,frequency,inline_link_clicks,video_play_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions'
+    if level != 'campaign':
+        params['fields'] += ',adset_id,adset_name' + (',ad_id,ad_name' if level == 'ad' else '')
     rows, seen = [], set()
     deadline=time.monotonic()+60
     for _ in range(100):
@@ -149,23 +177,31 @@ def meta_report(start, end, account_info=None):
         if data.get('error') or not isinstance(data.get('data'), list):
             raise AdsError('تعذّر قراءة تقرير Meta كاملًا.')
         for item in data['data']:
-            if not isinstance(item,dict) or not item.get('campaign_id') or not item.get('publisher_platform'):
+            if isinstance(item,dict) and any(item.get(k) is not None and item[k] != wanted for k,wanted in [('date_start',start),('date_stop',end)]):
+                raise AdsError('Meta report dates do not match requested dates')
+            if not isinstance(item,dict) or not item.get('campaign_id') or not item.get(entity_field) or not item.get('publisher_platform'):
                 raise AdsError('صفوف تقرير Meta غير مكتملة؛ لم يُرجع تقرير جزئي.')
             if item.get('account_currency') != account_info['currency']:
                 raise AdsError('عملة التقرير لا تطابق عملة الحساب؛ لم تُجمع النتائج.')
             for field in ('actions','action_values'):
                 if not isinstance(item.get(field,[]),list) or not all(isinstance(v,dict) for v in item.get(field,[])):
                     raise AdsError('بيانات تحويلات Meta غير مكتملة.')
-            rows.append({'campaign_id':item.get('campaign_id'),'campaign_name':item.get('campaign_name'),
+            rows.append({'entity_id':item.get(entity_field),'entity_name':item.get(name_field),
+                'parent_id':item.get('adset_id') if level=='ad' else item.get('campaign_id') if level=='adgroup' else None,
+                'campaign_id':item.get('campaign_id'),'campaign_name':item.get('campaign_name'),
                 'placement':item.get('publisher_platform'), 'currency':item.get('account_currency'),
-                **{k:_number(item.get(k)) for k in ('impressions','clicks','spend','ctr','cpc')},
-                'actions':item.get('actions',[]), 'action_values':item.get('action_values',[])})
+                **{k:_metric(item.get(k), precise) for k in ('impressions','clicks','spend','ctr','cpc')},
+                'actions':item.get('actions',[]), 'action_values':item.get('action_values',[]),
+                **({'reach':_metric(item.get('reach'),precise),'frequency':_metric(item.get('frequency'),precise),
+                    'link_clicks':_metric(item.get('inline_link_clicks'),precise),
+                    **{target:_single_action_metric(item.get(field),precise) for target,field in
+                        [('video_plays','video_play_actions'),('video_p25','video_p25_watched_actions'),('video_p50','video_p50_watched_actions'),('video_p75','video_p75_watched_actions'),('video_p100','video_p100_watched_actions')]}} if website_metrics else {})})
         paging = data.get('paging', {})
         if not isinstance(paging,dict):
             raise AdsError('بيانات صفحات Meta غير مكتملة.')
         if not paging.get('next'):
             return {'platform':'meta','verified':True,'start_date':start,'end_date':end,'rows':rows,
-                'account':account_info, 'partial_day':end >= datetime.now(ZoneInfo(account_info['timezone'])).date().isoformat(),
+                'level':level, 'account':account_info, 'partial_day':end >= datetime.now(ZoneInfo(account_info['timezone'])).date().isoformat(),
                 'coverage':'Facebook, Instagram and other returned Meta placements; dates use ad account timezone',
                 'attribution':'Platform-attributed actions; not Shopify-confirmed purchases'}
         cursors = paging.get('cursors')
@@ -176,7 +212,11 @@ def meta_report(start, end, account_info=None):
         seen.add(cursor); params['after'] = cursor
     raise AdsError('تقرير Meta كبير؛ اختاري مدة أقصر.')
 
-def tiktok_report(start, end):
+def tiktok_report(start, end, level='campaign', precise=False, website_metrics=False):
+    if level not in ('campaign','adgroup','ad'):
+        raise ValueError('Unsupported report level')
+    entity_field=level+'_id'
+    name_field=level+'_name'
     start, end = _dates(start, end)
     if not configuration()['tiktok']['configured']:
         raise AdsError('ربط TikTok يحتاج إعداد بيانات حساب الإعلانات.')
@@ -187,6 +227,14 @@ def tiktok_report(start, end):
         'data_level':'AUCTION_CAMPAIGN','dimensions':json.dumps(['campaign_id']),
         'metrics':json.dumps(['campaign_name','spend','impressions','clicks','ctr','cpc','conversion']),
         'start_date':start,'end_date':end,'page':1,'page_size':100}
+    params['data_level']='AUCTION_'+level.upper()
+    params['dimensions']=json.dumps([entity_field])
+    if level != 'campaign':
+        params['metrics']=json.dumps([name_field,'campaign_id','campaign_name','spend','impressions','clicks','ctr','cpc','conversion'])
+    if level=='ad':
+        params['metrics']=json.dumps(json.loads(params['metrics'])+['adgroup_id','adgroup_name'])
+    if website_metrics and level != 'campaign':
+        params['metrics']=json.dumps(json.loads(params['metrics'])+['complete_payment','total_complete_payment_rate','web_event_add_to_cart','total_landing_page_view','video_play_actions','video_watched_2s','video_watched_6s','video_views_p25','video_views_p50','video_views_p75','video_views_p100'])
     rows = []
     deadline=time.monotonic()+60
     for page in range(1,101):
@@ -204,16 +252,25 @@ def tiktok_report(start, end):
             if not isinstance(item,dict) or not isinstance(item.get('metrics'),dict) or not isinstance(item.get('dimensions'),dict):
                 raise AdsError('صفوف تقرير TikTok غير مكتملة.')
             metrics = item.get('metrics',{})
-            rows.append({'campaign_id':item.get('dimensions',{}).get('campaign_id'),
+            entity_id=item['dimensions'].get(entity_field)
+            if not str(entity_id or '').isdigit():
+                raise AdsError('Missing TikTok report entity ID')
+            rows.append({'entity_id':entity_id,'entity_name':metrics.get(name_field),
+                'parent_id':metrics.get('campaign_id') if level=='adgroup' else metrics.get('adgroup_id') if level=='ad' else None,
+                'campaign_id':item.get('dimensions',{}).get('campaign_id') or metrics.get('campaign_id'),
                 'campaign_name':metrics.get('campaign_name'),'placement':'tiktok',
                 'currency':None,
-                **{k:_number(metrics.get(k)) for k in ('spend','impressions','clicks','ctr','cpc','conversion')}})
+                **{k:_metric(metrics.get(k), precise) for k in ('spend','impressions','clicks','ctr','cpc','conversion')},
+                **({'actions':[{'action_type':event,'value':_metric(metrics[metric],precise)} for event,metric in
+                    [('tiktok_website_complete_payment','complete_payment'),('tiktok_website_add_to_cart','web_event_add_to_cart'),('tiktok_website_landing_page_view','total_landing_page_view')] if metric in metrics and metrics[metric] is not None],
+                    'action_values':[{'action_type':'tiktok_website_complete_payment','value':_metric(metrics['total_complete_payment_rate'],precise)}] if metrics.get('total_complete_payment_rate') is not None else [],
+                    **{target:_metric(metrics.get(metric),precise) for target,metric in [('video_plays','video_play_actions'),('video_2s','video_watched_2s'),('video_6s','video_watched_6s'),('video_p25','video_views_p25'),('video_p50','video_views_p50'),('video_p75','video_views_p75'),('video_p100','video_views_p100')]}} if website_metrics and level!='campaign' else {})})
         page_info = body.get('page_info')
         total = page_info.get('total_page') if isinstance(page_info,dict) else None
         if type(total) is not int or total < 0:
             raise AdsError('بيانات صفحات TikTok غير مكتملة.')
         if page >= total:
-            return {'platform':'tiktok','verified':True,'start_date':start,'end_date':end,'rows':rows,
+            return {'platform':'tiktok','verified':True,'level':level,'start_date':start,'end_date':end,'rows':rows,
                 'coverage':'Auction campaign report; dates use advertiser timezone; currency requires account confirmation',
                 'attribution':'conversion is the campaign conversion event, not necessarily a purchase'}
     raise AdsError('تقرير TikTok كبير؛ اختاري مدة أقصر.')
